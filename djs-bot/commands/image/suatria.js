@@ -62,7 +62,7 @@ const command = new SlashCommand()
 		// const data = await fetchData("https://some-random-api.com/animal/raccoon");
 		if (interaction.guildId && !guildSpecificIDs.includes(interaction.guildId)) {
 			return interaction.reply({
-				content: "this is a guild specific command, does not support in every server",
+				content: "only selected guilds can use this command",
 				ephemeral: true,
 			});
 		}
