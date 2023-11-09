@@ -67,13 +67,6 @@ const command = new SlashCommand()
 			});
 		}
 		try {
-			console.log("start /suatria");
-
-			// avatar = interaction.user.displayAvatarURL({
-			//   format: "png",
-			//   dynamic: true,
-			// });
-
 			await interaction.deferReply({ ephemeral: false });
 
 			const statsEmbed = new EmbedBuilder()
