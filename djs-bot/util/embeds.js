@@ -2,6 +2,7 @@ const { getClient } = require("../bot");
 const prettyMilliseconds = require("pretty-ms");
 const { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require("discord.js");
 const { escapeMarkdown } = require("discord.js");
+const { showPlayerPositionBar } = require("./utils.js");
 
 /**
  * @typedef {object} ColorEmbedParams
@@ -68,25 +69,42 @@ const embedClearedQueue = () =>
  *
  * @param {TrackStartedEmbedParams}
  */
-const trackStartedEmbed = ({ track, player, title = 'Now playing' } = {}) => {
+const trackStartedEmbed = ({ track, player, title = 'Now playing https://cdn.discordapp.com/attachments/1171758910764498944/1227285783183097977/logo.gif?ex=6627d9f4&is=661564f4&hm=9154cc2880d8d2b53e4832eee826291980d9fe91ae6f6075145bce804edee195&', isPause = false } = {}) => {
 	const client = getClient();
 
 	const embed = new EmbedBuilder().setColor(client.config.embedColor);
 
 	if (track) {
+		let playerPosition;
+		try {
+			playerPosition = player.position;
+			// Explicitly check if playerPosition is undefined after trying to assign it.
+			if (playerPosition === undefined) {
+				throw new Error("player.position is undefined");
+			}
+		} catch (err) {
+			playerPosition = 0;
+			// console.error("Error retrieving player position:", err);
+		}
 		embed.setAuthor({ name: title, iconURL: client.config.iconURL })
 			.setDescription(`[${track.title}](${track.uri})`)
 			.addFields([
 				{
 					name: "Requested by",
-					value: `${track.requester ?? 'ʕ•ᴥ•ʔ'}`,
+					value: `${track.requester}`,
 					inline: true,
 				},
 				{
-					name: "Duration",
+					name: "Progress",
 					value: track.isStream
-						? `\`LIVE\``
-						: `\`${prettyMilliseconds(track.duration, {
+						? `\`LIVE 🔴\``
+						: `\`${prettyMilliseconds(playerPosition, {
+								secondsDecimalDigits: 0,
+						  })}\` ${showPlayerPositionBar(
+								playerPosition,
+								track.duration,
+								isPause,
+						  )} \`${prettyMilliseconds(track.duration, {
 								secondsDecimalDigits: 0,
 						  })}\``,
 					inline: true,
@@ -103,7 +121,8 @@ const trackStartedEmbed = ({ track, player, title = 'Now playing' } = {}) => {
 	} else {
 		// !TODO: finish this
 		embed.setTitle("No song currently playing").setImage(
-			"https://cdn.discordapp.com/avatars/788006279837909032/e4cf889f9fe19f9b4dd5301d51bddcb2.webp?size=4096"
+			// "https://cdn.discordapp.com/avatars/788006279837909032/e4cf889f9fe19f9b4dd5301d51bddcb2.webp?size=4096"
+			"https://cdn.discordapp.com/attachments/1041061256267829399/1041062075608334436/yohta_scream.png?ex=6559071c&is=6546921c&hm=2dc436f3bfac4bfa43433b66bb36b353e90ca2f5d29245ede3bf2381d01df7fa&"
 		);
 	}
 
@@ -118,7 +137,7 @@ const trackStartedEmbed = ({ track, player, title = 'Now playing' } = {}) => {
  * @param {ControlChannelMessageParams}
  * @returns {import("discord.js").MessagePayload | import("discord.js").MessageCreateOptions}
  */
-const controlChannelMessage = ({ guildId, track } = {}) => {
+const controlChannelMessage = ({ guildId, track, isPause = false } = {}) => {
 	const player = guildId ? getClient().manager.Engine.players.get(guildId) : undefined;
 
 	const prev = new ButtonBuilder()
@@ -174,7 +193,7 @@ const controlChannelMessage = ({ guildId, track } = {}) => {
 
 	return {
 		content: "Join a voice channel and queue songs by name or url in here.",
-		embeds: [trackStartedEmbed({ track, player })],
+		embeds: [trackStartedEmbed({ track, player, isPause })],
 		components,
 	};
 };

@@ -1,5 +1,5 @@
 const { getClient } = require("../bot");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
 const { escapeMarkdown } = require("discord.js");
 
 const guildSpecificIDs = [
@@ -61,6 +61,25 @@ const addQueuePositionEmbed = ({ track, player, requesterId }, position = undefi
 
 	return embed;
 };
+
+function showPlayerPositionBar(currentPosition, totalDuration, isPause = false, barLength = 10) {
+	// console.log(currentPosition, totalDuration);
+	// console.log(isPause);
+	const playedProportion = currentPosition / totalDuration;
+	const playedLength = Math.round(playedProportion * barLength);
+	const remainingLength = Math.max(0, barLength - playedLength - 1);
+
+	const progressDoneEmoji = "<:progressed:1172214967446024262>"; // Replace with the actual emoji ID for "played" part
+	const progressLeftEmoji = "<:progress:1172214989763915846>"; // Replace with the actual emoji ID for "remaining" part
+	const progressRunEmoji = "<a:yhota_run2:1172216976207261776>";
+	const progressStopEmoji = "<:yohta_stop:1172239599586770975>";
+
+	return (
+		progressDoneEmoji.repeat(playedLength) +
+		(isPause ? progressStopEmoji : progressRunEmoji) +
+		progressLeftEmoji.repeat(remainingLength)
+	);
+}
 
 async function fetchData(url) {
 	try {
@@ -277,4 +296,5 @@ module.exports = {
 	emptyStrHandler,
 	addQueuePositionEmbed,
 	guildSpecificIDs,
+	showPlayerPositionBar,
 };
