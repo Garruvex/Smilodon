@@ -7,6 +7,7 @@ const {
   ActionRowBuilder,
 } = require("discord.js");
 const { escapeMarkdown } = require("discord.js");
+const { showPlayerPositionBar } = require("./utils.js");
 
 /**
  * @typedef {object} ColorEmbedParams
@@ -16,24 +17,24 @@ const { escapeMarkdown } = require("discord.js");
  * @param {ColorEmbedParams}
  */
 const colorEmbed = ({ color, desc }) => {
-  if (!desc?.length) throw new Error("[colorEmbed] No description provided");
+	if (!desc?.length) throw new Error("[colorEmbed] No description provided");
 
-  return new EmbedBuilder()
-    .setColor(color || getClient().config.embedColor)
-    .setDescription(desc);
+	return new EmbedBuilder()
+		.setColor(color || getClient().config.embedColor)
+		.setDescription(desc);
 };
 
 /**
  * @param {ColorEmbedParams}
  */
 const successEmbed = ({ color, desc = "Success" } = {}) =>
-  colorEmbed({ color: color, desc: `✅ | **${desc}**` });
+	colorEmbed({ color: color, desc: `✅ | **${desc}**` });
 
 /**
  * @param {ColorEmbedParams}
  */
 const errorEmbed = ({ color, desc = "Error" } = {}) =>
-  colorEmbed({ color: color, desc: `❌ | **${desc}**` });
+	colorEmbed({ color: color, desc: `❌ | **${desc}**` });
 
 /**
  * @param {ColorEmbedParams} options
@@ -41,24 +42,24 @@ const errorEmbed = ({ color, desc = "Error" } = {}) =>
 const redEmbed = (options = {}) => colorEmbed({ color: "Red", ...options });
 
 const embedNoLLNode = () =>
-  redEmbed({
-    desc: "Lavalink node is not connected",
-  });
+	redEmbed({
+		desc: "Lavalink node is not connected",
+	});
 
 const embedNoTrackPlaying = () =>
-  redEmbed({
-    desc: "Nothing is playing right now.",
-  });
+	redEmbed({
+		desc: "Nothing is playing right now.",
+	});
 
 const embedNotEnoughTrackToClear = () =>
-  errorEmbed({
-    desc: "Invalid, Not enough track to be cleared.",
-  });
+	errorEmbed({
+		desc: "Invalid, Not enough track to be cleared.",
+	});
 
 const embedClearedQueue = () =>
-  successEmbed({
-    desc: "Cleared the queue!",
-  });
+	successEmbed({
+		desc: "Cleared the queue!",
+	});
 
 /**
  * @typedef {object} TrackStartedEmbedParams
@@ -66,49 +67,64 @@ const embedClearedQueue = () =>
  *
  * @param {TrackStartedEmbedParams}
  */
-const trackStartedEmbed = ({ track, player } = {}) => {
-  const client = getClient();
+const trackStartedEmbed = ({ track, player, isPause = false } = {}) => {
+	const client = getClient();
 
-  const embed = new EmbedBuilder().setColor(client.config.embedColor);
+	const embed = new EmbedBuilder().setColor(client.config.embedColor);
 
-  if (track) {
-    embed
-      .setAuthor({ name: "Now playing", iconURL: client.config.iconURL })
-      .setDescription(`[${track.title}](${track.uri})`)
-      .addFields([
-        {
-          name: "Requested by",
-          value: `${track.requester}`,
-          inline: true,
-        },
-        {
-          name: "Duration",
-          value: track.isStream
-            ? `\`LIVE\``
-            : `\`${prettyMilliseconds(track.duration, {
-                secondsDecimalDigits: 0,
-              })}\``,
-          inline: true,
-        },
-      ]);
+	if (track) {
+		let playerPosition;
+		try {
+			playerPosition = player.position;
+			// Explicitly check if playerPosition is undefined after trying to assign it.
+			if (playerPosition === undefined) {
+				throw new Error("player.position is undefined");
+			}
+		} catch (err) {
+			playerPosition = 0;
+			// console.error("Error retrieving player position:", err);
+		}
+		embed.setAuthor({ name: "Now playing", iconURL: client.config.iconURL })
+			.setDescription(`[${track.title}](${track.uri})`)
+			.addFields([
+				{
+					name: "Requested by",
+					value: `${track.requester}`,
+					inline: true,
+				},
+				{
+					name: "Progress",
+					value: track.isStream
+						? `\`LIVE 🔴\``
+						: `\`${prettyMilliseconds(playerPosition, {
+								secondsDecimalDigits: 0,
+						  })}\` ${showPlayerPositionBar(
+								playerPosition,
+								track.duration,
+								(isPause = isPause)
+						  )} \`${prettyMilliseconds(track.duration, {
+								secondsDecimalDigits: 0,
+						  })}\``,
+					inline: true,
+				},
+			]);
 
-    try {
-      embed.setThumbnail(track.displayThumbnail("maxresdefault"));
-    } catch (err) {
-      embed.setThumbnail(track.thumbnail);
-    }
+		try {
+			embed.setThumbnail(track.displayThumbnail("maxresdefault"));
+		} catch (err) {
+			embed.setThumbnail(track.thumbnail);
+		}
 
-    if (player) addPlayerStateFooter(player, embed);
-  } else {
-    // !TODO: finish this
-    embed
-      .setTitle("No song currently playing")
-      .setImage(
-        "https://cdn.discordapp.com/avatars/788006279837909032/e4cf889f9fe19f9b4dd5301d51bddcb2.webp?size=4096"
-      );
-  }
+		if (player) addPlayerStateFooter(player, embed);
+	} else {
+		// !TODO: finish this
+		embed.setTitle("No song currently playing").setImage(
+			// "https://cdn.discordapp.com/avatars/788006279837909032/e4cf889f9fe19f9b4dd5301d51bddcb2.webp?size=4096"
+			"https://cdn.discordapp.com/attachments/1041061256267829399/1041062075608334436/yohta_scream.png?ex=6559071c&is=6546921c&hm=2dc436f3bfac4bfa43433b66bb36b353e90ca2f5d29245ede3bf2381d01df7fa&"
+		);
+	}
 
-  return embed;
+	return embed;
 };
 
 /**
@@ -119,66 +135,59 @@ const trackStartedEmbed = ({ track, player } = {}) => {
  * @param {ControlChannelMessageParams}
  * @returns {import("discord.js").MessagePayload | import("discord.js").MessageCreateOptions}
  */
-const controlChannelMessage = ({ guildId, track } = {}) => {
-  const player = guildId
-    ? getClient().manager.Engine.players.get(guildId)
-    : undefined;
+const controlChannelMessage = ({ guildId, track, isPause = false } = {}) => {
+	const player = guildId ? getClient().manager.Engine.players.get(guildId) : undefined;
 
-  const prev = new ButtonBuilder()
-    .setCustomId("cc/prev")
-    .setStyle(ButtonStyle.Primary)
-    .setEmoji("⏮️");
+	const prev = new ButtonBuilder()
+		.setCustomId("cc/prev")
+		.setStyle(ButtonStyle.Primary)
+		.setEmoji("⏮️");
 
-  const playpause = new ButtonBuilder()
-    .setCustomId("cc/playpause")
-    .setStyle(ButtonStyle.Primary)
-    .setEmoji("⏯️");
+	const playpause = new ButtonBuilder()
+		.setCustomId("cc/playpause")
+		.setStyle(ButtonStyle.Primary)
+		.setEmoji("⏯️");
 
-  const stop = new ButtonBuilder()
-    .setCustomId("cc/stop")
-    .setStyle(ButtonStyle.Danger)
-    .setEmoji("⏹️");
+	const stop = new ButtonBuilder()
+		.setCustomId("cc/stop")
+		.setStyle(ButtonStyle.Danger)
+		.setEmoji("⏹️");
 
-  const next = new ButtonBuilder()
-    .setCustomId("cc/next")
-    .setStyle(ButtonStyle.Primary)
-    .setEmoji("⏭️");
+	const next = new ButtonBuilder()
+		.setCustomId("cc/next")
+		.setStyle(ButtonStyle.Primary)
+		.setEmoji("⏭️");
 
-  const firstRow = new ActionRowBuilder().addComponents(
-    prev,
-    playpause,
-    stop,
-    next
-  );
+	const firstRow = new ActionRowBuilder().addComponents(prev, playpause, stop, next);
 
-  const lowerVolume = new ButtonBuilder()
-    .setCustomId("cc/vlower")
-    .setStyle(ButtonStyle.Secondary)
-    .setEmoji("🔉");
+	const lowerVolume = new ButtonBuilder()
+		.setCustomId("cc/vlower")
+		.setStyle(ButtonStyle.Secondary)
+		.setEmoji("🔉");
 
-  const louderVolume = new ButtonBuilder()
-    .setCustomId("cc/vlouder")
-    .setStyle(ButtonStyle.Secondary)
-    .setEmoji("🔊");
+	const louderVolume = new ButtonBuilder()
+		.setCustomId("cc/vlouder")
+		.setStyle(ButtonStyle.Secondary)
+		.setEmoji("🔊");
 
-  const autoqueue = new ButtonBuilder()
-    .setCustomId("cc/autoqueue")
-    .setStyle(ButtonStyle.Secondary)
-    .setEmoji("♾️");
+	const autoqueue = new ButtonBuilder()
+		.setCustomId("cc/autoqueue")
+		.setStyle(ButtonStyle.Secondary)
+		.setEmoji("♾️");
 
-  const secondRow = new ActionRowBuilder().addComponents(
-    lowerVolume,
-    louderVolume,
-    autoqueue
-  );
+	const secondRow = new ActionRowBuilder().addComponents(
+		lowerVolume,
+		louderVolume,
+		autoqueue
+	);
 
-  const components = [firstRow, secondRow];
+	const components = [firstRow, secondRow];
 
-  return {
-    content: "Join a voice channel and queue songs by name or url in here.",
-    embeds: [trackStartedEmbed({ track, player })],
-    components,
-  };
+	return {
+		content: "Join a voice channel and queue songs by name or url in here.",
+		embeds: [trackStartedEmbed({ track, player, isPause })],
+		components,
+	};
 };
 
 /**

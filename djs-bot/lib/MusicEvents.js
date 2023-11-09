@@ -3,7 +3,14 @@
 const colors = require("colors");
 const { getClient } = require("../bot");
 const socket = require("../api/v1/dist/ws/eventsHandler");
-const { updateControlMessage, updateNowPlaying } = require("../util/controlChannel");
+const {
+	updateControlMessage,
+	updatePauseControlMessage,
+	updateNowPlaying,
+	getControlChannelMessage,
+} = require("../util/controlChannel");
+
+const { controlChannelMessage, redEmbed, trackStartedEmbed } = require("../util/embeds");
 
 // entries in this map should be removed when bot disconnected from vc
 const progressUpdater = new Map();
@@ -17,23 +24,48 @@ function stopProgressUpdater(guildId) {
 	}
 }
 
-function updateProgress({ player, track }) {
+async function updateProgress({ player, track }) {
 	const gid = player.guild;
 	if (!gid?.length) return;
 
 	stopProgressUpdater(gid);
 
+	const message = await getControlChannelMessage(gid);
+	let lastUpdateTime = Date.now();
+	let isPause = false;
 	progressUpdater.set(
 		gid,
 		setInterval(() => {
-			if (!player.playing || player.paused) return;
-
+			if (!player.playing || player.paused) {
+				const currentTime = Date.now();
+				const elapsedTime = currentTime - lastUpdateTime;
+				if (elapsedTime > 100000 || !isPause) {
+					// console.log("Pause Player");
+					updatePauseControlMessage(player.guild, track);
+					lastUpdateTime = Date.now();
+					isPause = true;
+				}
+				return;
+			}
+			isPause = false;
 			player.position += 1000;
 
 			socket.handleProgressUpdate({
 				guildId: player.guild,
 				position: player.position,
 			});
+
+			if (message) {
+				const currentTime = Date.now();
+				const elapsedTime = currentTime - lastUpdateTime;
+				// console.log(elapsedTime.toString());
+				if (elapsedTime > 5000) {
+					// console.log("update progress");
+					updateControlMessage(player.guild, track);
+					// message.edit(controlChannelMessage({ gid, track }));
+					lastUpdateTime = Date.now();
+				}
+			}
 		}, 1000)
 	);
 }

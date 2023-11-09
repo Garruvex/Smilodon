@@ -125,6 +125,14 @@ const updateControlMessage = async (guildId, track) => {
 	return message.edit(controlChannelMessage({ guildId, track }));
 };
 
+const updatePauseControlMessage = async (guildId, track) => {
+	const message = await getControlChannelMessage(guildId);
+
+	if (!message) throw new Error("Guild doesn't have control channel");
+
+	return message.edit(controlChannelMessage({ guildId, track, isPause: true }));
+};
+
 const runIfNotControlChannel = async (player, cb) => {
 	const controlMessage = await getControlChannelMessage(player.guild);
 
@@ -179,6 +187,7 @@ module.exports = {
 	getControlChannelMessage,
 	deleteControlChannelMessage,
 	updateControlMessage,
+	updatePauseControlMessage,
 	setDbControlChannel,
 	updateNowPlaying,
 	runIfNotControlChannel,
