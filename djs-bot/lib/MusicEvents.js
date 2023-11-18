@@ -31,41 +31,62 @@ async function updateProgress({ player, track }) {
 	stopProgressUpdater(gid);
 
 	const message = await getControlChannelMessage(gid);
-	let lastUpdateTime = Date.now();
+	let lastMsgUpdateTime = Date.now();
+	let lastIntervalTime = Date.now();
 	let isPause = false;
+	let isReset = true;
 	progressUpdater.set(
 		gid,
 		setInterval(() => {
 			if (!player.playing || player.paused) {
-				const currentTime = Date.now();
-				const elapsedTime = currentTime - lastUpdateTime;
-				if (elapsedTime > 100000 || !isPause) {
-					// console.log("Pause Player");
-					updatePauseControlMessage(player.guild, track);
-					lastUpdateTime = Date.now();
-					isPause = true;
+				if (message && player.paused) {
+					if (!isPause) {
+						try {
+							// console.log("pause message");
+							updatePauseControlMessage(
+								player.guild,
+								track
+							);
+							isPause = true;
+						} catch (error) {
+							console.error(
+								"Error updating message:",
+								error
+							);
+						}
+						isReset = true;
+					}
 				}
 				return;
 			}
+
+			const currentTime = Date.now();
 			isPause = false;
-			player.position += 1000;
+			const IntervalElapsedTime = currentTime - lastIntervalTime;
+			player.position += IntervalElapsedTime;
+			lastIntervalTime = currentTime;
+			// player.position += 1000;
+
+			if (message) {
+				const elapsedTime = currentTime - lastMsgUpdateTime;
+
+				// Update the message only if more than 5 seconds have passed since the last update
+				if (elapsedTime >= 10000 || isReset) {
+					// console.log("Update message");
+					try {
+						updateControlMessage(player.guild, track);
+						lastMsgUpdateTime = currentTime; // Update the lastUpdateTime to the current time
+						isReset = false;
+					} catch (error) {
+						console.error("Error updating message:", error);
+					}
+				}
+			}
 
 			socket.handleProgressUpdate({
 				guildId: player.guild,
 				position: player.position,
 			});
-
-			if (message) {
-				const currentTime = Date.now();
-				const elapsedTime = currentTime - lastUpdateTime;
-				// console.log(elapsedTime.toString());
-				if (elapsedTime > 5000) {
-					// console.log("update progress");
-					updateControlMessage(player.guild, track);
-					// message.edit(controlChannelMessage({ gid, track }));
-					lastUpdateTime = Date.now();
-				}
-			}
 		}, 1000)
 	);
 }
