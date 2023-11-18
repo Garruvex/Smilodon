@@ -2,7 +2,7 @@ const { getClient } = require("../bot");
 const prettyMilliseconds = require("pretty-ms");
 const { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require("discord.js");
 const { escapeMarkdown } = require("discord.js");
-const { showPlayerPositionBar } = require("./utils.js");
+const { showPlayerPositionBar, trackUpdateEmbed } = require("./utils.js");
 
 /**
  * @typedef {object} ColorEmbedParams
@@ -95,7 +95,7 @@ const trackStartedEmbed = ({ track, player, title = 'Now playing https://cdn.dis
 					inline: true,
 				},
 				{
-					name: "Progress",
+					name: "Duration",
 					value: track.isStream
 						? `\`LIVE 🔴\``
 						: `\`${prettyMilliseconds(playerPosition, {
@@ -107,7 +107,7 @@ const trackStartedEmbed = ({ track, player, title = 'Now playing https://cdn.dis
 						  )} \`${prettyMilliseconds(track.duration, {
 								secondsDecimalDigits: 0,
 						  })}\``,
-					inline: true,
+					inline: false,
 				},
 			]);
 
@@ -193,7 +193,7 @@ const controlChannelMessage = ({ guildId, track, isPause = false } = {}) => {
 
 	return {
 		content: "Join a voice channel and queue songs by name or url in here.",
-		embeds: [trackStartedEmbed({ track, player, isPause })],
+		embeds: [trackUpdateEmbed({ track, player, isPause })],
 		components,
 	};
 };

@@ -1,6 +1,7 @@
 const { getClient } = require("../bot");
 const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
 const { escapeMarkdown } = require("discord.js");
+const prettyMilliseconds = require("pretty-ms");
 
 const guildSpecificIDs = [
 	"427106982109904899",
@@ -62,22 +63,112 @@ const addQueuePositionEmbed = ({ track, player, requesterId }, position = undefi
 	return embed;
 };
 
-function showPlayerPositionBar(currentPosition, totalDuration, isPause = false, barLength = 10) {
+/**
+ * @typedef {object} TrackStartedEmbedParams
+ * @property {import("cosmicord.js").CosmiTrack=} track
+ *
+ * @param {TrackStartedEmbedParams}
+ */
+const trackUpdateEmbed = ({ track, player, isPause = false } = {}) => {
+	const client = getClient();
+
+	const embed = new EmbedBuilder().setColor(client.config.embedColor);
+
+	if (track) {
+		let playerPosition;
+		try {
+			playerPosition = player.position;
+			// Explicitly check if playerPosition is undefined after trying to assign it.
+			if (playerPosition === undefined) {
+				throw new Error("player.position is undefined");
+			}
+		} catch (err) {
+			playerPosition = 0;
+			// console.error("Error retrieving player position:", err);
+		}
+		embed.setAuthor({ name: "Now playing", iconURL: client.config.iconURL })
+			.setDescription(`[${track.title}](${track.uri})`)
+			.addFields([
+				{
+					name: "Requested by",
+					value: `${track.requester}`,
+					inline: true,
+				},
+				{
+					name: "Queue",
+					value: `${player?.queue?.size || 0}`,
+					inline: true,
+				},
+				{
+					name: "Progress",
+					value: track.isStream
+						? `\`LIVE 🔴\``
+						: `\`${prettyMilliseconds(playerPosition, {
+								secondsDecimalDigits: 0,
+						  })}\` ${showPlayerPositionBar(
+								playerPosition,
+								track.duration,
+								(isPause = isPause)
+						  )} \`${prettyMilliseconds(track.duration, {
+								secondsDecimalDigits: 0,
+						  })}\``,
+					inline: false,
+				},
+			]);
+
+		try {
+			embed.setThumbnail(track.displayThumbnail("maxresdefault"));
+		} catch (err) {
+			embed.setThumbnail(track.thumbnail);
+		}
+
+		if (player) addPlayerStateFooter(player, embed);
+	} else {
+		// !TODO: finish this
+		embed.setTitle("No song currently playing").setImage(
+			// "https://cdn.discordapp.com/avatars/788006279837909032/e4cf889f9fe19f9b4dd5301d51bddcb2.webp?size=4096"
+			"https://cdn.discordapp.com/attachments/1041061256267829399/1041062075608334436/yohta_scream.png?ex=6559071c&is=6546921c&hm=2dc436f3bfac4bfa43433b66bb36b353e90ca2f5d29245ede3bf2381d01df7fa&"
+		);
+	}
+
+	return embed;
+};
+
+const addPlayerStateFooter = (player, embed) => {
+	const states = [
+		["autoqueue", !!player.get("autoQueue")],
+		["24/7", !!player.get("twentyFourSeven")],
+	];
+
+	const shownStates = states.filter((state) => state[1]);
+
+	if (shownStates.length)
+		embed.setFooter({
+			text: shownStates.map((state) => state[0]).join(" • "),
+		});
+};
+
+function showPlayerPositionBar(currentPosition, totalDuration, isPause = false, barLength = 14) {
 	// console.log(currentPosition, totalDuration);
 	// console.log(isPause);
+	if (barLength <= 2) {
+		throw new Error("barLength must be greater than 2");
+	}
 	const playedProportion = currentPosition / totalDuration;
-	const playedLength = Math.round(playedProportion * barLength);
-	const remainingLength = Math.max(0, barLength - playedLength - 1);
+	const playedLength = Math.min(barLength - 2, Math.round(playedProportion * barLength));
+	const remainingLength = Math.max(0, barLength - playedLength - 2);
 
 	const progressDoneEmoji = "<:progressed:1172214967446024262>"; // Replace with the actual emoji ID for "played" part
 	const progressLeftEmoji = "<:progress:1172214989763915846>"; // Replace with the actual emoji ID for "remaining" part
-	const progressRunEmoji = "<a:yhota_run2:1172216976207261776>";
+	const progressRunEmoji = "<a:yhota_run3:1172598823793721435>";
 	const progressStopEmoji = "<:yohta_stop:1172239599586770975>";
+	const progressEndEmoji = "<a:canned_fish:1172601450350776431> ";
 
 	return (
 		progressDoneEmoji.repeat(playedLength) +
 		(isPause ? progressStopEmoji : progressRunEmoji) +
-		progressLeftEmoji.repeat(remainingLength)
+		progressLeftEmoji.repeat(remainingLength) +
+		progressEndEmoji
 	);
 }
 
@@ -297,4 +388,5 @@ module.exports = {
 	addQueuePositionEmbed,
 	guildSpecificIDs,
 	showPlayerPositionBar,
+	trackUpdateEmbed,
 };

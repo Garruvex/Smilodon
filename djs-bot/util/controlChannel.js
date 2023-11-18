@@ -1,6 +1,7 @@
 const { Message } = require("discord.js");
 const { getClient } = require("../bot");
 const { controlChannelMessage, redEmbed, trackStartedEmbed } = require("./embeds");
+const { trackUpdateEmbed } = require("./utils.js");
 
 /**
  * @type {Map<string, Message>}
@@ -159,7 +160,7 @@ const updateNowPlaying = async (player, track) => {
 	return runIfNotControlChannel(player, async () => {
 		const client = getClient();
 
-		const emb = trackStartedEmbed({ track, player });
+		const emb = trackUpdateEmbed({ track, player });
 
 		const nowPlaying = await client.channels.cache
 			.get(player.textChannel)
