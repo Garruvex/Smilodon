@@ -69,7 +69,7 @@ const embedClearedQueue = () =>
  *
  * @param {TrackStartedEmbedParams}
  */
-const trackStartedEmbed = ({ track, player, title = 'Now playing https://cdn.discordapp.com/attachments/1171758910764498944/1227285783183097977/logo.gif?ex=6627d9f4&is=661564f4&hm=9154cc2880d8d2b53e4832eee826291980d9fe91ae6f6075145bce804edee195&', isPause = false } = {}) => {
+const trackStartedEmbed = ({ track, player, title = "Now playing", isPause = false } = {}) => {
 	const client = getClient();
 
 	const embed = new EmbedBuilder().setColor(client.config.embedColor);
@@ -103,7 +103,7 @@ const trackStartedEmbed = ({ track, player, title = 'Now playing https://cdn.dis
 						  })}\` ${showPlayerPositionBar(
 								playerPosition,
 								track.duration,
-								isPause,
+								isPause
 						  )} \`${prettyMilliseconds(track.duration, {
 								secondsDecimalDigits: 0,
 						  })}\``,
