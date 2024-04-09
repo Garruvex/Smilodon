@@ -86,8 +86,13 @@ const trackUpdateEmbed = ({ track, player, isPause = false } = {}) => {
 			playerPosition = 0;
 			// console.error("Error retrieving player position:", err);
 		}
-		embed.setAuthor({ name: "Now playing", iconURL: client.config.iconURL })
-			.setDescription(`[${track.title}](${track.uri})`)
+		embed.setAuthor({
+			name: "Now playing",
+			iconURL: client.config.iconURL,
+		})
+			.setDescription(
+				`<a:now_playing:1227326152067252417>[${track.title}](${track.uri})`
+			)
 			.addFields([
 				{
 					name: "Requested by",
