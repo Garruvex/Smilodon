@@ -78,7 +78,7 @@ const embedClearedQueue = () =>
 const trackStartedEmbed = ({
 	track,
 	player,
-	title = `Now playing`,
+	title = `Now Playing`,
 	isPause = false,
 	largeArtwork = false,
 } = {}) => {
@@ -227,7 +227,7 @@ const controlChannelMessage = ({ guildId, track, isPause = false } = {}) => {
 	const embed = trackStartedEmbed({
 		track,
 		player,
-		title: "Now playing <:now_playing:1172239599586770975>",
+		title: `Now playing`,
 		isPause,
 		largeArtwork: true,
 	});
