@@ -227,7 +227,7 @@ const controlChannelMessage = ({ guildId, track, isPause = false } = {}) => {
 	const embed = trackStartedEmbed({
 		track,
 		player,
-		title: `Now playing`,
+		title: `Now Playing`,
 		isPause,
 		largeArtwork: true,
 	});
