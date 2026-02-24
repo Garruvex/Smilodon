@@ -78,7 +78,7 @@ const embedClearedQueue = () =>
 const trackStartedEmbed = ({
 	track,
 	player,
-	title = `Now playing <a:now_playing:1227326152067252417>`,
+	title = `Now playing`,
 	isPause = false,
 	largeArtwork = false,
 } = {}) => {
