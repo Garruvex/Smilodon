@@ -70,6 +70,7 @@ const embedClearedQueue = () =>
  * @property {import("../lib/MusicEvents").ILavalinkTrack=} track
  * @property {import("../lib/clients/MusicClient").LavalinkPlayer} player
  * @property {string=} title
+ * @property {boolean} [isPause]
  * @property {boolean} [largeArtwork] - If true, use embed image (large) instead of thumbnail (small). Use for control channel.
  *
  * @param {TrackStartedEmbedParams}
@@ -77,7 +78,8 @@ const embedClearedQueue = () =>
 const trackStartedEmbed = ({
 	track,
 	player,
-	title = "Now playing <:now_playing:1172239599586770975>",
+	title = "Now playing <:now_playing:1227326152067252417>",
+	isPause = false,
 	largeArtwork = false,
 } = {}) => {
 	const client = getClient();
@@ -102,7 +104,7 @@ const trackStartedEmbed = ({
 			.addFields([
 				{
 					name: "Requested by",
-					value: `@${t.requester}`,
+					value: t.requesterId ? `<@${t.requesterId}>` : t.requester,
 					inline: true,
 				},
 				{
@@ -225,7 +227,7 @@ const controlChannelMessage = ({ guildId, track, isPause = false } = {}) => {
 	const embed = trackStartedEmbed({
 		track,
 		player,
-		title: "Now playing",
+		title: "Now playing <:now_playing:1172239599586770975>",
 		isPause,
 		largeArtwork: true,
 	});
