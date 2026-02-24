@@ -78,7 +78,7 @@ const embedClearedQueue = () =>
 const trackStartedEmbed = ({
 	track,
 	player,
-	title = "Now playing",
+	title = "Now playing <a:now_playing:1227326152067252417>",
 	isPause = false,
 	largeArtwork = false,
 } = {}) => {
@@ -100,7 +100,7 @@ const trackStartedEmbed = ({
 			player?.queue?.length ??
 			0;
 		embed.setAuthor({ name: title, iconURL: client.config.iconURL })
-			.setDescription(`<:now_playing:1227326152067252417> [${t.title}](${t.uri})`)
+			.setDescription(`<a:now_playing:1227326152067252417> [${t.title}](${t.uri})`)
 			.addFields([
 				{
 					name: "Requested by",
