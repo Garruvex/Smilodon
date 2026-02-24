@@ -73,10 +73,10 @@ module.exports = {
 	nodes: [
 		{
 			id: "LocalNode",
-			host: "127.0.0.1",
-			port: 2333,
-			authorization: process.env.LAVALINK_PASSWORD,
-			secure: false,
+			host: process.env.LAVALINK_HOST || "127.0.0.1",
+			port: Number(process.env.LAVALINK_PORT) || 2333,
+			authorization: process.env.LAVALINK_PASSWORD || "",
+			secure: process.env.LAVALINK_SECURE === "true",
 		},
 	],
 

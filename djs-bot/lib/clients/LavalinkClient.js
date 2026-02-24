@@ -21,13 +21,22 @@ const { setDefaultPlayerConfig } = require("../../util/musicManager");
  * @returns {import("lavalink-client").LavalinkManager & { leastUsedNode: import("lavalink-client").LavalinkNode | null }}
  */
 module.exports = (client) => {
-	const nodes = client.config.nodes.map((n) => ({
-		id: n.id || n.identifier || "node",
-		host: n.host,
-		port: Number(n.port),
-		authorization: n.authorization || n.password,
-		secure: n.secure === true,
-	}));
+	const rawNodes = Array.isArray(client.config.nodes) ? client.config.nodes : [];
+	const nodes = rawNodes
+		.filter((n) => n && (n.host || n.port))
+		.map((n) => ({
+			id: n.id || n.identifier || "node",
+			host: String(n.host || "127.0.0.1"),
+			port: Number(n.port) || 2333,
+			authorization: String(n.authorization || n.password || ""),
+			secure: n.secure === true,
+		}));
+
+	if (nodes.length === 0) {
+		throw new SyntaxError(
+			"ManagerOption.nodes must be an Array of NodeOptions with at least 1 node. Set LAVALINK_PASSWORD (and optionally LAVALINK_HOST, LAVALINK_PORT) in .env or check config.nodes."
+		);
+	}
 
 	const manager = new LavalinkManager({
 		nodes,
