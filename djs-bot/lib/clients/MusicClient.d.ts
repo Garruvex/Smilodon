@@ -1,36 +1,66 @@
-import Bot from "../Bot";
-import { Message } from "discord.js";
-import {
-	CosmiNode,
-	CosmiPlayerOptions,
-	CosmiSearchQuery,
-	Cosmicord,
-	CosmiLoadedTracks,
-	CosmiPlayer,
-} from "cosmicord.js";
+/**
+ * Types for the Lavalink-Client music engine (Lavalink v4).
+ * @see https://github.com/Tomato6966/lavalink-client
+ */
 
-export interface CosmicordPlayerExtended extends CosmiPlayer {
-	search(query: CosmiSearchQuery, requesterId?: string): Promise<CosmiLoadedTracks>;
-	setResumeMessage(client: Bot, message: Message): Message<boolean>;
-	setPausedMessage(client: Bot, message: Message): Message<boolean>;
-	setNowplayingMessage(client: Bot, message: Message): Message<boolean>;
-
-	/** The guild id of the player */
-	get guild(): string;
+/** Lavalink-Client player (minimal interface used by the bot) */
+export interface LavalinkPlayer {
+	guildId: string;
+	queue: LavalinkQueue;
+	paused: boolean;
+	playing: boolean;
+	position: number;
+	voiceChannelId?: string;
+	voiceChannel?: string;
+	textChannelId?: string;
+	textChannel?: string;
+	pause(): void;
+	resume(): void;
+	play(options?: { clientTrack?: unknown }): Promise<unknown>;
+	skip(): void;
+	seek(position: number): void;
+	connect(): Promise<unknown>;
+	destroy(reason?: string): void;
+	changeVoiceState(options: { voiceChannelId: string }): Promise<unknown>;
+	search(options: { query: string }, requestUser: unknown): Promise<LavalinkLoadResult>;
+	get<T>(key: string): T;
+	set(key: string, value: unknown): this;
 }
 
-// this interface is confusing looking at its usage as `bot.manager`
-export interface MusicClient extends Cosmicord {
-	// `this` is wrong and only here for quick type workaround, also why does it extends Cosmicord
-	// !TODO: declare proper type for these extended class
-	Engine: this; // CosmicordExtended | ErelaExtended;
-
-	createPlayer(options: CosmiPlayerOptions, node?: CosmiNode): CosmicordPlayerExtended;
-
-	get leastUsedNode(): CosmiNode;
+/** Lavalink-Client queue (has .tracks array or is array-like) */
+export interface LavalinkQueue {
+	tracks?: unknown[];
+	length?: number;
+	current?: { info?: { identifier?: string }; identifier?: string; title?: string; author?: string; duration?: number };
+	previous?: unknown[] | unknown;
+	add(track: unknown | unknown[]): Promise<unknown>;
+	remove(position: number, end?: number): unknown;
+	splice(start: number, deleteCount: number, ...items: unknown[]): unknown[];
+	shuffle(): this;
 }
 
-export enum Engine {
-	"Cosmicord" = "Cosmicord",
-	"Erela" = "Erela",
+export interface LavalinkLoadResult {
+	loadType?: string;
+	tracks?: unknown[];
 }
+
+/** Lavalink-Client manager returned by the engine */
+export interface LavalinkManagerLike {
+	players: Map<string, LavalinkPlayer>;
+	nodeManager?: { nodes?: Map<string, unknown>; leastUsedNodes?(): unknown[] };
+	nodes?: Map<string, unknown>;
+	getPlayer(guildId: string): LavalinkPlayer | null;
+	createPlayer(options: { guildId: string; voiceChannelId: string; textChannelId: string }): LavalinkPlayer;
+	init(options: { id: string; username: string }): Promise<void>;
+	sendRawData(data: unknown): void;
+	readonly initiated?: boolean;
+}
+
+export type MusicClient = LavalinkManagerLike;
+
+/** Bot's music manager (has .Engine = Lavalink manager) */
+export interface MusicManagerLike {
+	Engine: LavalinkManagerLike;
+}
+
+export type IUsingPlayer = LavalinkPlayer;

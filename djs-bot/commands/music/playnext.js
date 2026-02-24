@@ -17,11 +17,10 @@ async function testUrlRegex(string) {
 	});
 }
 
-// This is currently only Erela.js compatible
 const command = new SlashCommand()
 	.setName("playnext")
 	.setDescription(
-		"Searches and plays the requested song \nSupports: \nYoutube, Spotify, Deezer, Apple Music"
+		"Searches and plays the requested song next \nSupports: \nYoutube, Spotify, Deezer, Apple Music"
 	)
 	.addStringOption((option) =>
 		option
@@ -45,9 +44,7 @@ const command = new SlashCommand()
 	})
 	.setRun(async (client, interaction, options) => {
 		let channel = await client.getChannel(client, interaction);
-		if (!channel) {
-			return;
-		}
+		if (!channel) return;
 
 		let node = await client.getLavalink(client);
 		if (!node) {
@@ -56,27 +53,21 @@ const command = new SlashCommand()
 					new EmbedBuilder()
 						.setColor("Red")
 						.setTitle("Node error!")
-						.setDescription(
-							`No available nodes to play music on!`
-						)
-						.setFooter({
-							text: "Oops! something went wrong but it's not your fault!",
-						}),
+						.setDescription("No available nodes to play music on!")
+						.setFooter({ text: "Oops! something went wrong but it's not your fault!" }),
 				],
 			});
 		}
 
 		let player = client.manager.Engine.createPlayer({
 			guildId: interaction.guild.id,
-			voiceChannel: channel.id,
-			textChannel: interaction.channel.id,
+			voiceChannelId: channel.id,
+			textChannelId: interaction.channel.id,
 		});
 
-		if (player.state !== "CONNECTED") {
-			player.connect();
-		}
+		await player.connect();
 
-		if (channel.type == "GUILD_STAGE_VOICE") {
+		if (channel.type === "GUILD_STAGE_VOICE") {
 			joinStageChannelRoutine(interaction.guild.members.me);
 		}
 
@@ -90,75 +81,75 @@ const command = new SlashCommand()
 		});
 
 		let query = options.getString("query", true);
-		const res = await player.search(query, interaction.user).catch((err) => {
+		const res = await player.search({ query }, interaction.user).catch((err) => {
 			client.error(err);
-			return {
-				loadType: "LOAD_FAILED",
-			};
+			return { loadType: "error" };
 		});
 
 		const editReplyEmbed = async (embed) => {
-			return interaction
-				.editReply({
-					embeds: [embed],
-				})
-				.catch(client.warn);
+			return interaction.editReply({ embeds: [embed] }).catch(client.warn);
 		};
 
-		if (res.loadType === "LOAD_FAILED") {
-			if (!player.queue.current) {
-				player.destroy();
-			}
-
-			await editReplyEmbed(
-				redEmbed({
-					desc: "There was an error while searching",
-				})
-			);
+		if (res.loadType === "error") {
+			if (!player.queue.current) player.destroy();
+			await editReplyEmbed(redEmbed({ desc: "There was an error while searching" }));
+			if (ret) setTimeout(() => ret.delete().catch(client.warn), 20000);
+			return ret;
 		}
 
-		if (res.loadType === "NO_MATCHES") {
-			if (!player.queue.current) {
-				player.destroy();
-			}
-
+		if (res.loadType === "empty") {
+			if (!player.queue.current) player.destroy();
 			await editReplyEmbed(redEmbed({ desc: "No results were found" }));
+			if (ret) setTimeout(() => ret.delete().catch(client.warn), 20000);
+			return ret;
 		}
 
-		if (res.loadType === "TRACK_LOADED" || res.loadType === "SEARCH_RESULT") {
-			player.queue.add(res.tracks[0], 0);
+		player.set("requester", interaction.user);
 
-			if (!player.playing && !player.paused && !player.queue.size) {
-				player.play();
+		if (res.loadType === "track" || res.loadType === "search") {
+			const track = res.tracks?.[0];
+			if (!track) {
+				await editReplyEmbed(redEmbed({ desc: "No results were found" }));
+				if (ret) setTimeout(() => ret.delete().catch(client.warn), 20000);
+				return ret;
 			}
+			track.requester = interaction.user;
+			if (track.userData == null) track.userData = {};
+			track.userData.requester = interaction.user;
 
-			if (player.queue.totalSize <= 1)
-				player.queue.previous = player.queue.current;
+			await player.queue.add(track, 0);
+
+			const queueLen = player.queue.tracks?.length ?? 0;
+			if (!player.playing && !player.paused && queueLen <= 1) {
+				await player.play();
+			}
 
 			await editReplyEmbed(
 				addQueuePositionEmbed(
-					{
-						track: res.tracks[0],
-						player,
-						requesterId: interaction.user.id,
-					},
+					{ track, player, requesterId: interaction.user.id },
 					0
 				)
 			);
 		}
 
-		if (res.loadType === "PLAYLIST_LOADED") {
-			player.queue.add(res.tracks, 0);
+		if (res.loadType === "playlist") {
+			const tracks = res.tracks ?? [];
+			if (tracks.length) {
+				for (const t of tracks) {
+					t.requester = interaction.user;
+					if (t.userData == null) t.userData = {};
+					t.userData.requester = interaction.user;
+				}
+				await player.queue.add(tracks, 0);
 
-			if (
-				!player.playing &&
-				!player.paused &&
-				player.queue.totalSize === res.tracks.length
-			) {
-				player.play();
+				const queueLen = player.queue.tracks?.length ?? 0;
+				if (!player.playing && !player.paused && queueLen === tracks.length) {
+					await player.play();
+				}
 			}
-
-			await editReplyEmbed(loadedPlaylistEmbed({ searchResult: res, query }));
+			await editReplyEmbed(
+				loadedPlaylistEmbed({ searchResult: { tracks, playlist: res.playlist ?? {}, loadType: "playlist" }, query })
+			);
 		}
 
 		if (ret) setTimeout(() => ret.delete().catch(client.warn), 20000);

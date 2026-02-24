@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const { removeTrack } = require("../../util/player");
 
 const command = new SlashCommand()
@@ -37,18 +37,19 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("There are no songs to remove."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 
 		await interaction.deferReply();
 
 		const position = Number(args) - 1;
-		if (position > player.queue.size) {
+		const queueSize = player.queue?.tracks?.length ?? player.queue?.size ?? 0;
+		if (position > queueSize) {
 			let thing = new EmbedBuilder()
 				.setColor(client.config.embedColor)
 				.setDescription(
-					`Current queue has only **${player.queue.size}** track`
+					`Current queue has only **${queueSize}** track`
 				);
 			return interaction.editReply({ embeds: [thing] });
 		}

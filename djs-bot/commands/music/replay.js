@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 
 const command = new SlashCommand()
 	.setName("replay")
@@ -30,7 +30,7 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("I'm not playing anything."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		
@@ -39,11 +39,13 @@ const command = new SlashCommand()
 		player.seek(0);
 		
 		let song = player.queue.current;
+		const { getTrackDisplay } = require("../../util/utils");
+		const t = getTrackDisplay(song) || {};
 		return interaction.editReply({
 			embeds: [
 				new EmbedBuilder()
 					.setColor(client.config.embedColor)
-					.setDescription(`Replay [${ song.title }](${ song.uri })`),
+					.setDescription(`Replay [${ t.title }](${ t.uri })`),
 			],
 		});
 	});

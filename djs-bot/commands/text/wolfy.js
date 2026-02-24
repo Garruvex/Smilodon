@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 
 const { emptyStrHandler } = require("../../util/utils.js");
 
@@ -51,12 +51,12 @@ const command = new SlashCommand()
 						interaction.user.username,
 					iconURL: interaction.user.displayAvatarURL(),
 				});
-			return interaction.reply({ embeds: [statsEmbed], ephemeral: false });
+			return interaction.reply({ embeds: [statsEmbed] });
 		} catch (e) {
 			console.log(e);
 			return interaction.reply({
 				content: "somthing went wrong, please try again",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 	});

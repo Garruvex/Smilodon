@@ -1,4 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
+const { MessageFlags } = require("discord.js");
 const { getE621ImageAndReply } = require("../../util/utils.js");
 
 const command = new SlashCommand()
@@ -20,7 +21,7 @@ const command = new SlashCommand()
 			console.error(error);
 			await interaction.editReply({
 				content: "An error occurred while processing your command.",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 	});

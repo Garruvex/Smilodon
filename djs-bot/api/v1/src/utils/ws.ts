@@ -3,7 +3,7 @@ import { WS_ROUTES_PREFIX } from '../lib/constants';
 import { IPlayerSocket } from '../interfaces/ws';
 import { ESocketEventType, ISocketEvent, ITrack } from '../interfaces/wsShared';
 import { getBot } from '..';
-import { CosmiPlayer } from 'cosmicord.js';
+import type { LavalinkPlayer } from '../../../../lib/clients/MusicClient';
 import { constructITrack } from './wsShared';
 
 export function createWsRoute(route: string) {
@@ -40,10 +40,12 @@ export function wsPublish<K extends ESocketEventType>(
   bot.wsServer?.publish(topic, JSON.stringify(e));
 }
 
-export function getPlayerQueue(player?: CosmiPlayer, hqThumbnail?: boolean) {
+export function getPlayerQueue(player?: LavalinkPlayer | { queue: { tracks?: unknown[] } | unknown[] }, hqThumbnail?: boolean) {
   if (!player) return [];
 
-  return player.queue.map((t, idx) =>
-    constructITrack({ track: t as any, id: idx, hqThumbnail }),
+  const q = (player as { queue?: { tracks?: unknown[] } | unknown[] }).queue;
+  const arr = q && typeof q === 'object' && 'tracks' in q ? (q as { tracks?: unknown[] }).tracks ?? [] : (Array.isArray(q) ? q : []);
+  return arr.map((t: any, idx: number) =>
+    constructITrack({ track: t, id: idx, hqThumbnail }),
   );
 }

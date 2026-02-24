@@ -1,9 +1,11 @@
 const { GuildMember } = require("discord.js");
 const { handleQueueUpdate, handleStop, handlePause } = require("../lib/MusicEvents");
+const { updateControlMessage } = require("./controlChannel");
+const { addAutoQueueTrack } = require("./autoQueue");
 
 const triggerSocketQueueUpdate = (player) => {
 	handleQueueUpdate({
-		guildId: player.guild,
+		guildId: player.guildId ?? player.guild,
 		player,
 	});
 };
@@ -15,20 +17,17 @@ const triggerSocketPause = (player, state) => {
 	});
 };
 
-const spliceQueue = (player, ...restArgs) => {
-	const ret = player.queue.splice(...restArgs);
-
+const spliceQueue = async (player, ...restArgs) => {
+	const ret = await player.queue.splice(...restArgs);
 	triggerSocketQueueUpdate(player);
-
 	return ret;
 };
 
-const clearQueue = (player) => {
-	const ret = player.queue.clear();
-
+const clearQueue = async (player) => {
+	const q = player.queue;
+	const len = q.tracks?.length ?? 0;
+	if (len) await q.splice(0, len);
 	triggerSocketQueueUpdate(player);
-
-	return ret;
 };
 
 const removeTrack = (player, ...restArgs) => {
@@ -48,60 +47,70 @@ const shuffleQueue = (player) => {
 };
 
 /**
- * @param {import("cosmicord.js").CosmiPlayer} player
+ * Play the previous track (Lavalink-Client: queue.previous is array)
  */
 const playPrevious = async (player) => {
-	const previousSong = player.queue.previous;
+	const prevArr = player.queue.previous;
+	const previousSong = Array.isArray(prevArr) ? prevArr[prevArr.length - 1] : prevArr;
 	const currentSong = player.queue.current;
-	const nextSong = player.queue[0];
+	const nextSong = player.queue.tracks?.[0] ?? player.queue[0];
 
 	if (!previousSong || previousSong === currentSong || previousSong === nextSong) {
 		return 1;
 	}
 
-	if (previousSong !== currentSong && previousSong !== nextSong) {
-		spliceQueue(player, 0, 0, currentSong);
-		await player.play(previousSong);
-	}
-
+	spliceQueue(player, 0, 0, currentSong);
+	await player.play({ clientTrack: previousSong });
+	triggerSocketQueueUpdate(player);
 	return 0;
 };
 
 /**
- * @param {import("cosmicord.js").CosmiPlayer} player
+ * Stop playback (Lavalink-Client: stopPlaying or destroy)
  */
-const stop = (player) => {
-	if (player.twentyFourSeven) {
-		player.queue.clear();
-		player.stop();
+const stop = async (player) => {
+	const twentyFourSeven = player.get?.("twentyFourSeven") ?? player.twentyFourSeven;
+	if (twentyFourSeven) {
+		await clearQueue(player);
+		await player.stopPlaying(true);
 		player.set("autoQueue", false);
 	} else {
-		player.destroy();
+		await player.destroy();
 	}
-
-	// !TODO: test if need to empty queue manually here,
-	// does destroy also clears queue?
-
 	handleStop({ player });
 	triggerSocketQueueUpdate(player);
-
+	// Reset control channel to "No song currently playing" when stop is used
+	updateControlMessage(player.guildId).catch(() => {});
 	return 0;
 };
 
 /**
- * @param {import("cosmicord.js").CosmiPlayer} player
+ * Skip current track (Lavalink-Client: player.skip()).
+ * When queue is empty and autoQueue is on, add a related track first so skip() does not throw.
  */
-const skip = (player) => {
+const skip = async (player) => {
 	const autoQueue = player.get("autoQueue");
-	if (player.queue[0] == undefined && (!autoQueue || autoQueue === false)) {
+	const queueLen = player.queue?.tracks?.length ?? player.queue?.length ?? 0;
+	const hasNext = queueLen > 0;
+
+	if (!hasNext && !autoQueue) {
 		return 1;
 	}
 
-	player.queue.previous = player.queue.current;
-	player.stop();
+	if (!hasNext && autoQueue) {
+		const sourceTrack =
+			player.queue?.current ??
+			(player.queue?.previous?.length
+				? player.queue.previous[player.queue.previous.length - 1]
+				: null);
+		if (!sourceTrack) return 1;
+		const added = await addAutoQueueTrack(player, sourceTrack, { skipPlay: true });
+		if (!added) return 1;
+		// Queue now has 1 track; skip current so the library plays the added track
+	}
 
+	await player.skip();
 	handleStop({ player });
-
 	return 0;
 };
 
@@ -120,22 +129,22 @@ const joinStageChannelRoutine = (me) => {
 };
 
 /**
- * @type {(player: import("../lib/clients/MusicClient").CosmicordPlayerExtended, track: import("cosmicord.js").CosmiTrack|import("cosmicord.js").CosmiTrack[]):any}
+ * Add track(s) to queue (Lavalink-Client: queue.add is async)
  */
-const addTrack = (player, tracks) => {
-	const ret = player.queue.add(tracks);
-
+const addTrack = async (player, tracks) => {
+	const ret = await player.queue.add(tracks);
 	triggerSocketQueueUpdate(player);
-
 	return ret;
 };
 
-const pause = (player, state) => {
-	const ret = player.pause(state);
-
+const pause = async (player, state) => {
+	if (state) {
+		player.pause();
+	} else {
+		player.resume();
+	}
 	triggerSocketPause(player, state);
-
-	return ret;
+	return player;
 };
 
 module.exports = {

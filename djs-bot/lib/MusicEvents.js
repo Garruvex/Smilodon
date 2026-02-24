@@ -6,7 +6,7 @@ const socket = require("../api/v1/dist/ws/eventsHandler");
 const {
 	updateControlMessage,
 	updateNowPlaying,
-	runIfNotControlChannel,	
+	runIfNotControlChannel,
 	updatePauseControlMessage,
 	getControlChannelMessage,
 } = require("../util/controlChannel");
@@ -25,35 +25,44 @@ function stopProgressUpdater(guildId) {
 	}
 }
 
+function _gid(player) {
+	return player.guildId ?? player.guild;
+}
+
 async function updateProgress({ player, track }) {
-	const gid = player.guild;
+	const gid = _gid(player);
 	if (!gid?.length) return;
 
 	stopProgressUpdater(gid);
 
+	const client = getClient();
+	const engine = client?.manager?.Engine;
+	const getCurrentPlayer = () =>
+		(typeof engine?.getPlayer === "function" ? engine.getPlayer(gid) : null) ??
+		engine?.players?.get?.(gid) ??
+		null;
+
 	const message = await getControlChannelMessage(gid);
 	let lastMsgUpdateTime = Date.now();
-	let lastIntervalTime = Date.now();
 	let isPause = false;
 	let isReset = true;
 	progressUpdater.set(
 		gid,
 		setInterval(() => {
-			if (!player.playing || player.paused) {
-				if (message && player.paused) {
+			const currentPlayer = getCurrentPlayer();
+			if (!currentPlayer) {
+				stopProgressUpdater(gid);
+				return;
+			}
+			if (!currentPlayer.playing && !currentPlayer.paused) return;
+			if (!currentPlayer.playing || currentPlayer.paused) {
+				if (message && currentPlayer.paused) {
 					if (!isPause) {
 						try {
-							// console.log("pause message");
-							updatePauseControlMessage(
-								player.guild,
-								track
-							);
+							updatePauseControlMessage(gid, track);
 							isPause = true;
 						} catch (error) {
-							console.error(
-								"Error updating message:",
-								error
-							);
+							console.error("Error updating message:", error);
 						}
 						isReset = true;
 					}
@@ -63,20 +72,14 @@ async function updateProgress({ player, track }) {
 
 			const currentTime = Date.now();
 			isPause = false;
-			const IntervalElapsedTime = currentTime - lastIntervalTime;
-			player.position += IntervalElapsedTime;
-			lastIntervalTime = currentTime;
-			// player.position += 1000;
+			// position is read-only on Lavalink-Client Player; library updates it (clientBasedPositionUpdateInterval / server)
 
 			if (message) {
 				const elapsedTime = currentTime - lastMsgUpdateTime;
-
-				// Update the message only if more than 5 seconds have passed since the last update
 				if (elapsedTime >= 10000 || isReset) {
-					// console.log("Update message");
 					try {
-						updateControlMessage(player.guild, track);
-						lastMsgUpdateTime = currentTime; // Update the lastUpdateTime to the current time
+						updateControlMessage(gid, track);
+						lastMsgUpdateTime = currentTime;
 						isReset = false;
 					} catch (error) {
 						console.error("Error updating message:", error);
@@ -84,9 +87,10 @@ async function updateProgress({ player, track }) {
 				}
 			}
 
+			const position = currentPlayer.position ?? 0;
 			socket.handleProgressUpdate({
-				guildId: player.guild,
-				position: player.position,
+				guildId: gid,
+				position,
 			});
 		}, 1000)
 	);
@@ -106,7 +110,7 @@ function handleVoiceStateUpdate(oldState, newState) {
 }
 
 function handleStop({ player }) {
-	socket.handleStop({ guildId: player.guild });
+	socket.handleStop({ guildId: _gid(player) });
 }
 
 function handleQueueUpdate({ guildId, player }) {
@@ -117,11 +121,11 @@ function sendTrackHistory({ player, track }) {
 	const history = player.get("history");
 	if (!history) return;
 
+	const textChannelId = player.textChannelId ?? player.textChannel;
 	runIfNotControlChannel(player, () => {
 		const client = getClient();
-
 		client.channels.cache
-			.get(player.textChannel)
+			.get(textChannelId)
 			?.send({
 				embeds: [
 					trackStartedEmbed({ track, player, title: "Played track" }),
@@ -136,7 +140,7 @@ function sendTrackHistory({ player, track }) {
  */
 function handleTrackStart({ player, track }) {
 	const client = getClient();
-
+	const gid = _gid(player);
 	const playedTracks = client.playedTracks;
 
 	if (playedTracks.length >= 25) playedTracks.shift();
@@ -144,23 +148,24 @@ function handleTrackStart({ player, track }) {
 	if (!playedTracks.includes(track)) playedTracks.push(track);
 
 	updateNowPlaying(player, track);
-	updateControlMessage(player.guild, track);
+	updateControlMessage(gid, track);
 	sendTrackHistory({ player, track });
 
 	socket.handleTrackStart({ player, track });
-	socket.handlePause({ guildId: player.guild, state: player.paused });
-	handleQueueUpdate({ guildId: player.guild, player });
+	socket.handlePause({ guildId: gid, state: player.paused });
+	handleQueueUpdate({ guildId: gid, player });
 
 	updateProgress({ player, track });
 
+	const trackTitle = track?.info?.title ?? track?.title ?? "Unknown";
 	client.warn(
-		`Player: ${player.guild} | Track has started playing [${colors.blue(track.title)}]`
+		`Player: ${gid} | Track has started playing [${colors.blue(trackTitle)}]`
 	);
 	client.songsPlayed++;
 }
 
 function handlePause({ player, state }) {
-	socket.handlePause({ guildId: player.guild, state });
+	socket.handlePause({ guildId: _gid(player), state });
 }
 
 module.exports = {

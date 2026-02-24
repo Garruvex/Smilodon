@@ -17,7 +17,7 @@ const command = new SlashCommand()
 				.setImage(data.images[0].url)
 				.setDescription(`kisssssie!`)
 				.setFooter({ text: "😚" });
-			return interaction.reply({ embeds: [statsEmbed], ephemeral: false });
+			return interaction.reply({ embeds: [statsEmbed] });
 		} catch (e) {
 			console.log(e);
 			return interaction.reply({ content: "fail to get image" });

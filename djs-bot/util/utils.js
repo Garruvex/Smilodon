@@ -1,7 +1,24 @@
 const { getClient } = require("../bot");
-const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
+const { EmbedBuilder, AttachmentBuilder, MessageFlags } = require("discord.js");
 const { escapeMarkdown } = require("discord.js");
-const prettyMilliseconds = require("pretty-ms");
+const prettyMsModule = require("pretty-ms");
+const prettyMilliseconds = typeof prettyMsModule === "function" ? prettyMsModule : (prettyMsModule?.default ?? prettyMsModule);
+
+/** Normalize track for display (Lavalink-Client track.info shape) */
+function getTrackDisplay(track) {
+	if (!track) return null;
+	const info = track.info ?? track;
+	const title = info.title ?? track.title ?? "Unknown";
+	const uri = info.uri ?? track.uri ?? "";
+	const duration = Number(info.duration ?? track.duration ?? 0);
+	const isStream = Boolean(info.isStream ?? track.isStream);
+	const thumbnail = info.artworkUrl ?? track.thumbnail ?? (typeof track.displayThumbnail === "function" ? track.displayThumbnail("maxresdefault") : null);
+	const requester = track.requester ?? track.userData?.requester;
+	const requesterStr = typeof requester === "object" ? (requester?.username || requester?.name || "Unknown") : String(requester ?? "Unknown");
+	const requesterId = typeof requester === "object" ? (requester?.id ?? null) : null;
+	const identifier = info.identifier ?? track.identifier ?? "";
+	return { title, uri, duration, isStream, thumbnail, requester: requesterStr, requesterId, identifier };
+}
 
 const guildSpecificIDs = [
 	"427106982109904899",
@@ -10,22 +27,22 @@ const guildSpecificIDs = [
 
 /**
  * @typedef {object} AddQueueEmbedParams
- * @property {import("cosmicord.js").CosmiTrack} track
- * @property {import("../lib/clients/MusicClient").CosmicordPlayerExtended} player
+ * @property {import("../lib/MusicEvents").ILavalinkTrack} track
+ * @property {import("../lib/clients/MusicClient").LavalinkPlayer} player
  * @property {string} requesterId
  *
  * @param {AddQueueEmbedParams}
  */
 const addQueuePositionEmbed = ({ track, player, requesterId }, position = undefined) => {
 	const client = getClient();
-
-	const title = escapeMarkdown(track.title).replace(/\]|\[/g, "");
+	const t = getTrackDisplay(track) || {};
+	const title = escapeMarkdown(t.title).replace(/\]|\[/g, "");
 
 	const embed = new EmbedBuilder()
 		.setColor(client.config.embedColor)
 		.setAuthor({ name: "Added to queue", iconURL: client.config.iconURL })
-		.setDescription(`[${title}](${track.uri})` || "No Title")
-		.setURL(track.uri)
+		.setDescription(`[${title}](${t.uri})` || "No Title")
+		.setURL(t.uri)
 		.addFields([
 			{
 				name: "Added by",
@@ -34,9 +51,9 @@ const addQueuePositionEmbed = ({ track, player, requesterId }, position = undefi
 			},
 			{
 				name: "Duration",
-				value: track.isStream
+				value: t.isStream
 					? `\`LIVE 🔴 \``
-					: `\`${client.ms(track.duration, {
+					: `\`${client.ms(t.duration, {
 							colonNotation: true,
 							secondsDecimalDigits: 0,
 					  })}\``,
@@ -44,17 +61,15 @@ const addQueuePositionEmbed = ({ track, player, requesterId }, position = undefi
 			},
 		]);
 
-	try {
-		embed.setThumbnail(track.displayThumbnail("maxresdefault"));
-	} catch (err) {
-		embed.setThumbnail(track.thumbnail);
-	}
+	if (t.thumbnail) embed.setThumbnail(t.thumbnail);
 
-	if (player.queue.totalSize > 1) {
+	const tracksLen = player.queue?.tracks?.length ?? player.queue?.size ?? 0;
+	const totalSize = (player.queue?.current ? 1 : 0) + tracksLen;
+	if (totalSize > 1) {
 		embed.addFields([
 			{
 				name: "Position in queue",
-				value: `${position ?? player.queue.size}`,
+				value: `${position ?? tracksLen}`,
 				inline: true,
 			},
 		]);
@@ -65,67 +80,61 @@ const addQueuePositionEmbed = ({ track, player, requesterId }, position = undefi
 
 /**
  * @typedef {object} TrackStartedEmbedParams
- * @property {import("cosmicord.js").CosmiTrack=} track
+ * @property {import("../lib/MusicEvents").ILavalinkTrack=} track
  *
  * @param {TrackStartedEmbedParams}
  */
 const trackUpdateEmbed = ({ track, player, isPause = false } = {}) => {
 	const client = getClient();
-
+	const t = getTrackDisplay(track);
 	const embed = new EmbedBuilder().setColor(client.config.embedColor);
 
-	if (track) {
+	if (track && t) {
 		let playerPosition;
 		try {
-			playerPosition = player.position;
-			// Explicitly check if playerPosition is undefined after trying to assign it.
-			if (playerPosition === undefined) {
-				throw new Error("player.position is undefined");
-			}
+			playerPosition = player?.position ?? 0;
+			if (playerPosition === undefined) playerPosition = 0;
 		} catch (err) {
 			playerPosition = 0;
-			// console.error("Error retrieving player position:", err);
 		}
+		const queueSize =
+			player?.queue?.tracks?.length ?? player?.queue?.length ?? player?.queue?.size ?? 0;
 		embed.setAuthor({
 			name: "Now playing",
 			iconURL: client.config.iconURL,
 		})
 			.setDescription(
-				`<a:now_playing:1227326152067252417>[${track.title}](${track.uri})`
+				`<a:now_playing:1227326152067252417>[${t.title}](${t.uri})`
 			)
 			.addFields([
 				{
 					name: "Requested by",
-					value: `${track.requester}`,
+					value: `${t.requester}`,
 					inline: true,
 				},
 				{
 					name: "Queue",
-					value: `${player?.queue?.size || 0}`,
+					value: `${queueSize}`,
 					inline: true,
 				},
 				{
 					name: "Progress",
-					value: track.isStream
+					value: t.isStream
 						? `\`LIVE 🔴\``
 						: `\`${prettyMilliseconds(playerPosition, {
 								secondsDecimalDigits: 0,
 						  })}\` ${showPlayerPositionBar(
 								playerPosition,
-								track.duration,
-								(isPause = isPause)
-						  )} \`${prettyMilliseconds(track.duration, {
+								t.duration,
+								isPause
+						  )} \`${prettyMilliseconds(t.duration, {
 								secondsDecimalDigits: 0,
 						  })}\``,
 					inline: false,
 				},
 			]);
 
-		try {
-			embed.setThumbnail(track.displayThumbnail("maxresdefault"));
-		} catch (err) {
-			embed.setThumbnail(track.thumbnail);
-		}
+		if (t.thumbnail) embed.setThumbnail(t.thumbnail);
 
 		if (player) addPlayerStateFooter(player, embed);
 	} else {
@@ -194,7 +203,7 @@ function emptyStrHandler(interaction, text) {
 	if (text.trim().length === 0) {
 		return interaction.reply({
 			content: "You need to provide a sentence to translate.",
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 	}
 }
@@ -237,11 +246,11 @@ async function getE621ImageAndReply(
 					"no result, please try a different tag"
 				),
 			],
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 	}
 
-	await interaction.deferReply({ ephemeral: false });
+	await interaction.deferReply();
 
 	try {
 		var descriptionStr = `Description: \n${getValue(data, "description")}`;
@@ -380,12 +389,12 @@ async function getE621ImageAndReply(
 					"something went wrong, please try again later"
 				),
 			],
-			ephemeral: false,
 		});
 	}
 }
 
 module.exports = {
+	getTrackDisplay,
 	fetchData,
 	getE621ImageAndReply,
 	getRandomInt,

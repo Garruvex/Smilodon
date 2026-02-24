@@ -1,17 +1,25 @@
-import { CosmiTrack } from "cosmicord.js";
-import { Track } from "erela.js";
-import { CosmicordPlayerExtended } from "../lib/clients/MusicClient";
+import type { LavalinkPlayer } from "./clients/MusicClient";
 import { VoiceState } from "discord.js";
 
-export type IUsingPlayer = CosmicordPlayerExtended;
+export type IUsingPlayer = LavalinkPlayer;
+
+/** Lavalink track (info object) or compatible shape */
+export interface ILavalinkTrack {
+	info?: { title?: string; author?: string; identifier?: string; duration?: number };
+	identifier?: string;
+	title?: string;
+	author?: string;
+	duration?: number;
+}
 
 export interface IHandleStopParams {
-	player: IUsingPlayer;
+	guildId: string;
+	player?: IUsingPlayer;
 }
 
 export interface IHandleTrackStartParams {
 	player: IUsingPlayer;
-	track: CosmiTrack | Track;
+	track: ILavalinkTrack | unknown;
 }
 
 export interface IHandleQueueUpdateParams {

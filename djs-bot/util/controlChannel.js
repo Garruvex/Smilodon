@@ -1,6 +1,6 @@
-const { Message } = require("discord.js");
+const { Message, MessageFlags } = require("discord.js");
 const { getClient } = require("../bot");
-const { controlChannelMessage, redEmbed, trackStartedEmbed } = require("./embeds");
+const { controlChannelMessage, redEmbed } = require("./embeds");
 const { trackUpdateEmbed } = require("./utils.js");
 
 /**
@@ -47,6 +47,30 @@ const getControlChannelMessage = async (guildId) => {
 	setControlChannelMessage(guildId, message);
 
 	return message;
+};
+
+/**
+ * Get the stored control channel id and message id for a guild (for editing the single control panel message).
+ * Uses cache first, then DB, so we always have valid channelId + messageId for REST edit.
+ * @param {string} guildId
+ * @returns {Promise<{ channelId: string, messageId: string } | null>}
+ */
+const getControlChannelIds = async (guildId) => {
+	const cached = controlChannelMessageCache.get(guildId);
+	if (cached && cached.id && (cached.channelId ?? cached.channel_id)) {
+		return {
+			channelId: cached.channelId ?? cached.channel_id,
+			messageId: cached.id,
+		};
+	}
+	const client = getClient();
+	if (!client.db) return null;
+	const row = await client.db.guild.findFirst({ where: { guildId } });
+	if (!row?.controlChannelId || !row?.controlChannelMessageId) return null;
+	return {
+		channelId: row.controlChannelId,
+		messageId: row.controlChannelMessageId,
+	};
 };
 
 const deleteControlChannelMessage = (guildId) => {
@@ -122,52 +146,86 @@ const handleMessageDelete = async (message) => {
 };
 
 const updateControlMessage = async (guildId, track) => {
-	const message = await getControlChannelMessage(guildId);
+	const ids = await getControlChannelIds(guildId);
+	if (!ids) return;
 
-	if (!message) {
-		// throw in debug mode
-		if (getClient().config.OPLevel > 1)
-			throw new Error("Guild doesn't have control channel");
+	const client = getClient();
+	let channel = client.channels?.cache?.get(ids.channelId);
+	if (!channel && guildId) {
+		const guild = client.guilds?.cache?.get(guildId);
+		if (guild) channel = await guild.channels.fetch(ids.channelId).catch(() => null);
+	}
+	if (!channel?.messages) return;
 
-		// else silently ignore
+	let payload;
+	try {
+		payload = controlChannelMessage({ guildId, track });
+	} catch (err) {
+		client.warn("Control panel: build payload failed", err?.message ?? err);
 		return;
 	}
-
-	return message.edit(controlChannelMessage({ guildId, track }));
+	try {
+		const message = await channel.messages.fetch(ids.messageId).catch((e) => {
+			client.warn("Control panel: fetch message failed", e?.message ?? e);
+			return null;
+		});
+		if (!message) return;
+		await message.edit(payload);
+	} catch (err) {
+		client.warn("Control panel: edit failed", err?.message ?? err);
+	}
 };
 
 const updatePauseControlMessage = async (guildId, track) => {
-	const message = await getControlChannelMessage(guildId);
+	const ids = await getControlChannelIds(guildId);
+	if (!ids) return;
 
-	if (!message) throw new Error("Guild doesn't have control channel");
+	const client = getClient();
+	let channel = client.channels?.cache?.get(ids.channelId);
+	if (!channel && guildId) {
+		const guild = client.guilds?.cache?.get(guildId);
+		if (guild) channel = await guild.channels.fetch(ids.channelId).catch(() => null);
+	}
+	if (!channel?.messages) return;
 
-	return message.edit(controlChannelMessage({ guildId, track, isPause: true }));
+	try {
+		const payload = controlChannelMessage({ guildId, track, isPause: true });
+		const message = await channel.messages.fetch(ids.messageId).catch(() => null);
+		if (!message) return;
+		await message.edit(payload);
+	} catch (err) {
+		client.warn("Control panel: pause edit failed", err?.message ?? err);
+	}
 };
 
 const runIfNotControlChannel = async (player, cb) => {
-	const controlMessage = await getControlChannelMessage(player.guild);
+	const guildId = player.guildId ?? player.guild;
+	const controlMessage = await getControlChannelMessage(guildId);
+	const textChannelId = player.textChannelId ?? player.textChannel;
 
-	if (player.textChannel !== controlMessage?.channelId) {
+	if (textChannelId !== controlMessage?.channelId) {
 		return cb();
 	}
 };
 
 /**
- * @param {import("../lib/clients/MusicClient").CosmicordPlayerExtended} player
- * @param {import("cosmicord.js").CosmiTrack} track
+ * @param {import("../lib/clients/MusicClient").LavalinkPlayer} player
+ * @param {import("../lib/MusicEvents").ILavalinkTrack} track
  */
 const updateNowPlaying = async (player, track) => {
 	return runIfNotControlChannel(player, async () => {
 		const client = getClient();
-
+		const textChannelId = player.textChannelId ?? player.textChannel;
 		const emb = trackUpdateEmbed({ track, player });
 
 		const nowPlaying = await client.channels.cache
-			.get(player.textChannel)
+			.get(textChannelId)
 			.send({ embeds: [emb] })
 			.catch(client.warn);
 
-		player.setNowplayingMessage(client, nowPlaying);
+		if (typeof player.setNowplayingMessage === "function") {
+			player.setNowplayingMessage(client, nowPlaying);
+		}
 	});
 };
 
@@ -188,8 +246,39 @@ const preventInteraction = async (interaction) => {
 				desc: "You can't run commands in dedicated Server Control Channel!",
 			}),
 		],
-		ephemeral: true,
+		flags: MessageFlags.Ephemeral,
 	});
+};
+
+/**
+ * Refresh the control channel embed for every guild that has one configured.
+ * Call this when the bot comes online so control panels show correct state (or "No song currently playing").
+ */
+const refreshAllControlChannels = async () => {
+	const client = getClient();
+	if (!client?.db) return;
+
+	const guilds = await client.db.guild.findMany({
+		where: {
+			controlChannelId: { not: null },
+			controlChannelMessageId: { not: null },
+		},
+		select: { guildId: true },
+	});
+
+	const engine = client.manager?.Engine;
+	for (const g of guilds) {
+		let track = null;
+		if (engine) {
+			const player =
+				(typeof engine.getPlayer === "function" ? engine.getPlayer(g.guildId) : null) ??
+				engine.players?.get?.(g.guildId);
+			if (player?.track) track = player.track;
+		}
+		await updateControlMessage(g.guildId, track).catch((err) => {
+			if (client.config?.OPLevel > 1) client.warn("Control channel refresh failed for guild " + g.guildId, err?.message ?? err);
+		});
+	}
 };
 
 module.exports = {
@@ -203,4 +292,5 @@ module.exports = {
 	updateNowPlaying,
 	runIfNotControlChannel,
 	preventInteraction,
+	refreshAllControlChannels,
 };

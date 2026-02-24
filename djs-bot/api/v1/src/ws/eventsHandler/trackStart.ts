@@ -8,9 +8,10 @@ export default function handleTrackStart({
   player,
   track,
 }: IHandleTrackStartParams) {
-  if (!player?.guild?.length) throw new TypeError('Missing guildId');
+  const guildId = player.guildId ?? (player as { guild?: string }).guild;
+  if (!guildId?.length) throw new TypeError('Missing guildId');
 
-  const to = 'player/' + player.guild;
+  const to = 'player/' + guildId;
   const d = createEventPayload(
     ESocketEventType.PLAYING,
     constructITrack({ track: track as any, id: -1 }),

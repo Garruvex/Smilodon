@@ -1,12 +1,11 @@
 import { Client, Message, ClientOptions, Collection } from "discord.js";
 import SlashCommand from "./SlashCommand";
 import Logger from "./Logger";
-import { MusicClient } from "./clients/MusicClient.d";
+import type { MusicManagerLike } from "./clients/MusicClient";
 import DBMS from "./DBMS";
 import prettyMilliseconds from "pretty-ms";
 import getChannel from "../util/getChannel";
 import getLavalink from "../util/getLavalink";
-import { CosmiTrack } from "cosmicord.js";
 import config from "../config";
 import { app, wsApp } from "../api/v1/src";
 
@@ -24,13 +23,13 @@ declare class Bot extends Client {
 	getLavalink: typeof getLavalink;
 	ms: typeof prettyMilliseconds;
 	deletedMessages: WeakSet<Message>;
-	playedTracks: Array<CosmiTrack>;
+	playedTracks: Array<{ info?: { identifier?: string }; identifier?: string }>;
 
 	/**
 	 * Denomination (name) of the bot
 	 */
 	denom: string | undefined;
-	manager: MusicClient | undefined;
+	manager: MusicManagerLike | undefined;
 	api: ReturnType<typeof app>;
 	wsServer: ReturnType<typeof wsApp>;
 	db: DBMS | undefined;

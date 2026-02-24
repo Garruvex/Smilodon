@@ -15,7 +15,7 @@ const command = new SlashCommand()
 				.setImage(data.image)
 				.setDescription(`Fact: ${data.fact}`)
 				.setFooter({ text: "RACCOON!" });
-			return interaction.reply({ embeds: [statsEmbed], ephemeral: false });
+			return interaction.reply({ embeds: [statsEmbed] });
 		} catch (err) {
 			console.log(err);
 		}

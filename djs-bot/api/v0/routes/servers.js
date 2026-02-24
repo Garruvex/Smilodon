@@ -35,18 +35,28 @@ module.exports = (req, res, bot) => {
 				avatar: member.user.avatarURL(),
 				roles: member.roles.cache.map(role => role.id),
 			})),
-			player: {
-				queue: bot.manager.Engine.players.get(guild.id)?.queue.map(track => ({
-					title: track.title,
-					author: track.author,
-					duration: track.duration,
-				})),
-				playing: {
-					title: bot.manager.Engine.players.get(guild.id)?.queue.current?.title,
-					author: bot.manager.Engine.players.get(guild.id)?.queue.current?.author,
-					duration: bot.manager.Engine.players.get(guild.id)?.queue.current?.duration,
-				}
-			}
+			player: (() => {
+				const p = bot.manager.Engine.players.get(guild.id);
+				const q = p?.queue;
+				const tracks = q?.tracks ?? q ?? [];
+				const arr = Array.isArray(tracks) ? tracks : [];
+				const current = q?.current;
+				const info = (t) => t?.info ?? t;
+				return {
+					queue: arr.map((track) => ({
+						title: info(track).title,
+						author: info(track).author,
+						duration: info(track).duration,
+					})),
+					playing: current
+						? {
+								title: info(current).title,
+								author: info(current).author,
+								duration: info(current).duration,
+						  }
+						: null,
+				};
+			})(),
 		});
 	}
 

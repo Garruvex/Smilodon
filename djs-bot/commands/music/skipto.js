@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const { removeTrack } = require("../../util/player");
 
 const command = new SlashCommand()
@@ -41,7 +41,7 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("I'm not in a channel."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 
@@ -50,7 +50,8 @@ const command = new SlashCommand()
 		const position = Number(args);
 
 		try {
-			if (!position || position < 0 || position > player.queue.size) {
+			const queueSize = player.queue?.tracks?.length ?? player.queue?.size ?? 0;
+			if (!position || position < 0 || position > queueSize) {
 				let thing = new EmbedBuilder()
 					.setColor(client.config.embedColor)
 					.setDescription("❌ | Invalid position!");

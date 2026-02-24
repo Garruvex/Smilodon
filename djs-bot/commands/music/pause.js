@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const { pause } = require("../../util/player");
 
 const command = new SlashCommand()
@@ -31,7 +31,7 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("Nothing is playing."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		
@@ -42,7 +42,7 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("Current playing track is already paused!"),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		

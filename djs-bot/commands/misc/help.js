@@ -4,6 +4,7 @@ const {
 	ActionRowBuilder,
 	StringSelectMenuBuilder,
 	Message,
+	MessageFlags,
 } = require("discord.js");
 const { capitalize } = require("../../util/string");
 const SlashCommand = require("../../lib/SlashCommand");
@@ -53,7 +54,7 @@ module.exports = {
 							"No command by that name exists\nUse `/help` to get a full list of the commands"
 						),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		} else if (client.slash.has(commandArg)) {
 			return interaction.reply({

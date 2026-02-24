@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const { shuffleQueue } = require("../../util/player");
 
 const command = new SlashCommand()
@@ -31,11 +31,12 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("There is no music playing."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 
-		if (!player.queue || !player.queue.length || player.queue.length === 0) {
+		const queueLen = player.queue?.tracks?.length ?? player.queue?.length ?? 0;
+		if (!player.queue || queueLen === 0) {
 			return interaction.reply({
 				embeds: [
 					new EmbedBuilder()
@@ -44,7 +45,7 @@ const command = new SlashCommand()
 							"There are not enough songs in the queue."
 						),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 

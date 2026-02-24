@@ -1,5 +1,5 @@
 const colors = require("colors");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const SlashCommand = require("../../lib/SlashCommand");
 const { historyEmbed } = require("../../util/embeds");
 const { deleteMessageDelay } = require("../../util/message");
@@ -33,7 +33,7 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("There's nothing playing in the queue"),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 

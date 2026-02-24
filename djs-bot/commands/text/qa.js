@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand.js");
-const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
+const { EmbedBuilder, AttachmentBuilder, MessageFlags } = require("discord.js");
 
 const command = new SlashCommand()
 	.setName("qa")
@@ -60,14 +60,14 @@ const command = new SlashCommand()
 			// 			interaction.user.username,
 			// 		iconURL: interaction.user.displayAvatarURL(),
 			// 	});
-			replyObj = { embeds: [questionEmbed], ephemeral: false };
+			replyObj = { embeds: [questionEmbed] };
 			if (file) {
 				if (file.contentType && file.contentType.startsWith("image/")) {
 					attachEmbed = new AttachmentBuilder().setFile(file.url);
 				} else {
 					return interaction.reply({
 						content: "not an image, please try again",
-						ephemeral: true,
+						flags: MessageFlags.Ephemeral,
 					});
 				}
 
@@ -81,7 +81,7 @@ const command = new SlashCommand()
 			console.log(e);
 			return interaction.reply({
 				content: "somthing went wrong, please try again",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 	});

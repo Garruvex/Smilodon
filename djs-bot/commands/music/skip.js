@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const playerUtil = require("../../util/player");
 const { redEmbed } = require("../../util/embeds");
 
@@ -32,19 +32,21 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("There is nothing to skip."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 
 		const song = player.queue.current;
+		const { getTrackDisplay } = require("../../util/utils");
+		const t = getTrackDisplay(song) || {};
 
-		const status = playerUtil.skip(player);
+		const status = await playerUtil.skip(player);
 
 		if (status === 1) {
 			return interaction.reply({
 				embeds: [
 					redEmbed({
-						desc: `There is nothing after [${song.title}](${song.uri}) in the queue.`
+						desc: `There is nothing after [${t.title || "this track"}](${t.uri || ""}) in the queue.`
 					}),
 				],
 			});

@@ -57,13 +57,11 @@ const handleMessageCreate = async (message) => {
 
 	const player = client.manager.Engine.createPlayer({
 		guildId: message.guild.id,
-		voiceChannel: memberVC.id,
-		textChannel: message.channel.id,
+		voiceChannelId: memberVC.id,
+		textChannelId: message.channel.id,
 	});
 
-	if (player.state !== "CONNECTED") {
-		player.connect();
-	}
+	await player.connect();
 
 	if (memberVC.type == "GUILD_STAGE_VOICE") {
 		joinStageChannelRoutine(message.guild.members.me);
@@ -86,11 +84,9 @@ const handleMessageCreate = async (message) => {
 		return retDel();
 	};
 
-	const searchResult = await player.search(query, message.author).catch((err) => {
+	const searchResult = await player.search({ query }, message.author).catch((err) => {
 		client.error(err);
-		return {
-			loadType: "LOAD_FAILED",
-		};
+		return { loadType: "error" };
 	});
 
 	const playerDestroy = () => {
@@ -99,19 +95,18 @@ const handleMessageCreate = async (message) => {
 		}
 	};
 
-	const triggerPlay = () => {
+	const triggerPlay = async () => {
 		if (!player.playing && !player.paused) {
-			player.play();
+			await player.play();
 		}
 	};
 
-	const loadFailed = searchResult.loadType === "LOAD_FAILED";
-	const noMatches = searchResult.loadType === "NO_MATCHES";
+	const loadFailed = searchResult.loadType === "error";
+	const noMatches = searchResult.loadType === "empty";
 	const trackLoaded =
-		searchResult.loadType === "TRACK_LOADED" ||
-		searchResult.loadType === "SEARCH_RESULT";
+		searchResult.loadType === "track" || searchResult.loadType === "search";
 
-	const playlistLoaded = searchResult.loadType === "PLAYLIST_LOADED";
+	const playlistLoaded = searchResult.loadType === "playlist";
 
 	if (loadFailed || noMatches) {
 		playerDestroy();
@@ -129,14 +124,15 @@ const handleMessageCreate = async (message) => {
 		return retDelAll();
 	}
 
-	const firstTrack = searchResult.tracks[0];
+	const firstTrack = searchResult.tracks?.[0];
 
-	if (trackLoaded) {
-		addTrack(player, firstTrack);
-
-		triggerPlay();
-
-		if (player.queue.totalSize <= 1) player.queue.previous = player.queue.current;
+	if (trackLoaded && firstTrack) {
+		firstTrack.requester = message.author;
+		if (firstTrack.userData == null) firstTrack.userData = {};
+		firstTrack.userData.requester = message.author;
+		player.set("requester", message.author);
+		await addTrack(player, firstTrack);
+		await triggerPlay();
 
 		await editResponse({
 			embeds: [
@@ -149,10 +145,15 @@ const handleMessageCreate = async (message) => {
 		});
 	}
 
-	if (playlistLoaded) {
-		addTrack(player, searchResult.tracks);
-
-		triggerPlay();
+	if (playlistLoaded && searchResult.tracks?.length) {
+		for (const t of searchResult.tracks) {
+			t.requester = message.author;
+			if (t.userData == null) t.userData = {};
+			t.userData.requester = message.author;
+		}
+		player.set("requester", message.author);
+		await addTrack(player, searchResult.tracks);
+		await triggerPlay();
 
 		await editResponse({
 			embeds: [loadedPlaylistEmbed({ searchResult, query })],

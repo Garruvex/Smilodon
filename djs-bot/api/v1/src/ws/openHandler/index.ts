@@ -1,6 +1,7 @@
 import { WebSocket } from 'uWebSockets.js';
 import { ESocketErrorCode, ESocketEventType } from '../../interfaces/wsShared';
 import { getBot } from '../..';
+import type { BotWithEngine } from '../../interfaces/common';
 import { getPlayerQueue, wsPlayerSubscribe, wsSendJson } from '../../utils/ws';
 import { IPlayerSocket } from '../../interfaces/ws';
 import {
@@ -10,9 +11,8 @@ import {
 } from '../../utils/wsShared';
 
 export default function handleOpen(ws: WebSocket<IPlayerSocket>) {
-  const bot = getBot();
+  const bot = getBot() as BotWithEngine;
   const wsData = ws.getUserData();
-  //            !TODO: WTF IS A `bot.manager`
   const player = bot.manager?.Engine.players.get(wsData.serverId);
 
   const sendDEmpty = () => {

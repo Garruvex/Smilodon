@@ -1,5 +1,6 @@
 "use strict";
 
+const { MessageFlags } = require("discord.js");
 const { colorEmbed } = require("./embeds");
 
 const reply = async (interaction, desc) =>
@@ -9,7 +10,7 @@ const reply = async (interaction, desc) =>
 				desc,
 			}),
 		],
-		ephemeral: true,
+		flags: MessageFlags.Ephemeral,
 	});
 
 module.exports = {

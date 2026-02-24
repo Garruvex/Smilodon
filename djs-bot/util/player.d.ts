@@ -1,36 +1,32 @@
-import { CosmiPlayer } from "cosmicord.js";
-import { GuildMember } from "discord.js";
-import { IUsingPlayer } from "../lib/MusicEvents";
+import type { GuildMember } from "discord.js";
+import type { IUsingPlayer } from "../lib/MusicEvents";
 
 export function triggerSocketQueueUpdate(player: IUsingPlayer): void;
 
 export function spliceQueue(
 	player: IUsingPlayer,
-	...restArgs: Parameters<IUsingPlayer["queue"]["splice"]>
-): ReturnType<IUsingPlayer["queue"]["splice"]>;
+	...restArgs: unknown[]
+): Promise<unknown>;
 
-export function clearQueue(player: IUsingPlayer): ReturnType<IUsingPlayer["queue"]["clear"]>;
+export function clearQueue(player: IUsingPlayer): Promise<void>;
 
-export function removeTrack(
-	player: IUsingPlayer,
-	...restArgs: Parameters<IUsingPlayer["queue"]["remove"]>
-): ReturnType<IUsingPlayer["queue"]["remove"]>;
+export function removeTrack(player: IUsingPlayer, ...restArgs: unknown[]): unknown;
 
 export function shuffleQueue(player: IUsingPlayer): ReturnType<IUsingPlayer["queue"]["shuffle"]>;
 
-export function playPrevious(player: CosmiPlayer): Promise<number>;
+export function playPrevious(player: IUsingPlayer): Promise<number>;
 
-export function stop(player: CosmiPlayer): number;
+export function stop(player: IUsingPlayer): number;
 
-export function skip(player: CosmiPlayer): number;
+export function skip(player: IUsingPlayer): number;
 
 export function joinStageChannelRoutine(me: GuildMember): void;
 
 export function addTrack(
 	player: IUsingPlayer,
-	tracks: Parameters<IUsingPlayer["queue"]["add"]>[0]
-): ReturnType<IUsingPlayer["queue"]["add"]>;
+	tracks: unknown | unknown[]
+): Promise<unknown>;
 
 export function triggerSocketPause(player: IUsingPlayer, state: boolean): void;
 
-export function pause(player: IUsingPlayer, state: boolean): ReturnType<IUsingPlayer["pause"]>;
+export function pause(player: IUsingPlayer, state: boolean): Promise<IUsingPlayer>;

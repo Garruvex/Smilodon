@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const { guildSpecificIDs } = require("../../util/utils.js");
 
 const imageURLList = [
@@ -63,11 +63,11 @@ const command = new SlashCommand()
 		if (interaction.guildId && !guildSpecificIDs.includes(interaction.guildId)) {
 			return interaction.reply({
 				content: "only selected guilds can use this command",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		try {
-			await interaction.deferReply({ ephemeral: false });
+			await interaction.deferReply();
 
 			const statsEmbed = new EmbedBuilder()
 				.setTitle("🐾🐕‍🦺🍇")
@@ -77,7 +77,7 @@ const command = new SlashCommand()
 				.setFooter({
 					text: "狼敖大大 -> https://twitter.com/WolfAustria ",
 				});
-			return interaction.editReply({ embeds: [statsEmbed], ephemeral: false });
+			return interaction.editReply({ embeds: [statsEmbed] });
 		} catch (e) {
 			console.log(e);
 		}

@@ -1,4 +1,5 @@
 const SlashCommand = require("../lib/SlashCommand");
+const { MessageFlags } = require("discord.js");
 const { colorEmbed } = require("../util/embeds");
 const { ccInteractionHook } = require("../util/interactions");
 const playerUtil = require("../util/player");
@@ -20,7 +21,7 @@ const command = new SlashCommand()
 
 		return interaction.reply({
 			embeds: [colorEmbed({ desc: "🔀 | **Successfully shuffled the queue.**" })],
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 	});
 

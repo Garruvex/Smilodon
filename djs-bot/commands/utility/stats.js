@@ -10,15 +10,13 @@ const command = new SlashCommand()
 	.setRun(async (client, interaction) => {
 		let nodes = "";
 
-		client.manager.Engine.nodes.forEach((node) => {
-			// show lavalink uptime in a nice format
-			const lavauptime = moment
-				.duration(node.stats.uptime)
-				.format(" D[d], H[h], m[m]");
-			// show lavalink memory usage in a nice format
-			const lavaram = (node.stats.memory.used / 1024 / 1024).toFixed(2);
-
-			nodes += `\`\`\`yml\nNode: ${node.options.identifier}\nUptime: ${lavauptime}\nRAM: ${lavaram} MB\nPlayers: ${node.stats.playingPlayers} out of ${node.stats.players}\nWrapper: ${client.config.musicEngine}\`\`\`\n`;
+		const nodeMap = client.manager.Engine.nodeManager?.nodes ?? client.manager.Engine.nodes;
+		const nodesList = nodeMap instanceof Map ? Array.from(nodeMap.values()) : Object.values(nodeMap || {});
+		nodesList.forEach((node) => {
+			const stats = node.stats ?? node.info ?? {};
+			const lavauptime = moment.duration(stats.uptime ?? 0).format(" D[d], H[h], m[m]");
+			const lavaram = ((stats.memory?.used ?? 0) / 1024 / 1024).toFixed(2);
+			nodes += `\`\`\`yml\nNode: ${node.options?.id ?? node.options?.identifier ?? "node"}\nUptime: ${lavauptime}\nRAM: ${lavaram} MB\nPlayers: ${stats.playingPlayers ?? 0} out of ${stats.players ?? 0}\nWrapper: ${client.config.musicEngine}\`\`\`\n`;
 		});
 
 		// get OS info
@@ -75,7 +73,7 @@ const command = new SlashCommand()
 			])
 			.setFooter({ text: `Build: ${gitHash}` });
 
-		return interaction.reply({ embeds: [statsEmbed], ephemeral: false });
+		return interaction.reply({ embeds: [statsEmbed] });
 	});
 
 module.exports = command;

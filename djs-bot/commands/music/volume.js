@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 
 const command = new SlashCommand()
 	.setName("volume")
@@ -36,7 +36,7 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("There is no music playing."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		

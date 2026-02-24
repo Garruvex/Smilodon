@@ -1,6 +1,7 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
-const prettyMilliseconds = require("pretty-ms");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
+const prettyMsModule = require("pretty-ms");
+const prettyMilliseconds = typeof prettyMsModule === "function" ? prettyMsModule : (prettyMsModule?.default ?? prettyMsModule);
 
 const command = new SlashCommand()
 	.setName("save")
@@ -31,7 +32,7 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("There is no music playing right now."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		
@@ -42,19 +43,19 @@ const command = new SlashCommand()
 				iconURL: `${ interaction.user.displayAvatarURL({ dynamic: true }) }`,
 			})
 			.setDescription(
-				`**Saved [${ player.queue.current.title }](${ player.queue.current.uri }) to your DM**`,
+				`**Saved [${ (require("../../util/utils").getTrackDisplay(player.queue.current) || {}).title || player.queue.current?.info?.title || "Track" }](${ (require("../../util/utils").getTrackDisplay(player.queue.current) || {}).uri || player.queue.current?.info?.uri || "" }) to your DM**`,
 			)
 			.addFields(
 				{
 					name: "Track Duration",
-					value: `\`${ prettyMilliseconds(player.queue.current.duration, {
+					value: `\`${ prettyMilliseconds((player.queue.current?.info ?? player.queue.current)?.duration ?? 0, {
 						colonNotation: true,
 					}) }\``,
 					inline: true,
 				},
 				{
 					name: "Track Author",
-					value: `\`${ player.queue.current.author }\``,
+					value: `\`${ player.queue.current?.info?.author ?? player.queue.current?.author ?? "Unknown" }\``,
 					inline: true,
 				},
 				{
@@ -74,7 +75,7 @@ const command = new SlashCommand()
 						"Please check your **DMs**. If you didn't receive any message from me please make sure your **DMs** are open",
 					),
 			],
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 	});
 

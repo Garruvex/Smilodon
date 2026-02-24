@@ -34,7 +34,7 @@ module.exports = async (client, message) => {
 		}
 		embed.setFooter({ text: `Message will be deleted in ${timeout / 1000} seconds` });
 		return message.channel
-			.send({ embeds: [embed], ephemeral: true })
+			.send({ embeds: [embed] })
 			.then((msg) => setTimeout(() => msg.delete(), timeout));
 	}
 

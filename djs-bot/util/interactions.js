@@ -1,3 +1,4 @@
+const { MessageFlags } = require("discord.js");
 const { embedNoLLNode, embedNoTrackPlaying, embedNotEnoughSong } = require("./embeds");
 
 /**
@@ -11,7 +12,7 @@ const ccInteractionHook = async (client, interaction, { minimumQueueLength } = {
 	}
 
 	const channel = await client.getChannel(client, interaction, {
-		ephemeral: true,
+		flags: MessageFlags.Ephemeral,
 	});
 
 	/**
@@ -35,23 +36,28 @@ const ccInteractionHook = async (client, interaction, { minimumQueueLength } = {
 	const sendError = (embed) => {
 		return interaction.reply({
 			embeds: [embed],
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 	};
 
-	if (!client.manager.Engine) {
+	const engine = client.manager?.Engine;
+	if (!engine) {
 		return returnError(sendError(embedNoLLNode()));
 	}
 
-	const player = client.manager.Engine.players.get(interaction.guild.id);
+	const player =
+		(typeof engine.getPlayer === "function" ? engine.getPlayer(interaction.guild.id) : null) ??
+		engine.players?.get?.(interaction.guild.id) ??
+		null;
 
 	if (!player) {
 		return returnError(sendError(embedNoTrackPlaying()));
 	}
 
+	const queueLen = player.queue?.tracks?.length ?? player.queue?.size ?? player.queue?.length ?? 0;
 	if (
 		typeof minimumQueueLength === "number" &&
-		(player.queue?.length ?? 0) < minimumQueueLength
+		queueLen < minimumQueueLength
 	) {
 		return returnError(sendError(embedNotEnoughSong()));
 	}
@@ -63,7 +69,7 @@ const checkPlayerVolume = async (player, interaction) => {
 	if (typeof player.volume !== "number")
 		return interaction.reply({
 			content: "Something's wrong: volume is not a number",
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 };
 

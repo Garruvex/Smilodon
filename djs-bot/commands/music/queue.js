@@ -1,10 +1,12 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder, Message, escapeMarkdown, AttachmentBuilder } = require("discord.js");
+const { EmbedBuilder, Message, escapeMarkdown, AttachmentBuilder, MessageFlags } = require("discord.js");
 const load = require("lodash");
-const pms = require("pretty-ms");
+const pmsModule = require("pretty-ms");
+const pms = typeof pmsModule === "function" ? pmsModule : (pmsModule?.default ?? pmsModule);
 const { classicCard } = require("songcard");
 const path = require("path");
 const { getButtons } = require("../../util/embeds");
+const { getTrackDisplay } = require("../../util/utils");
 
 const command = new SlashCommand()
 	.setName("queue")
@@ -36,7 +38,7 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("The bot isn't in a channel."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 
@@ -47,78 +49,70 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("There's nothing playing."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 
 		await interaction.deferReply().catch(() => {});
 
 		const queue = player.queue;
-		if (!queue.length) {
+		const tracks = queue.tracks ?? queue;
+		const queueArr = Array.isArray(tracks) ? tracks : [];
+		if (!queueArr.length) {
 			const song = player.queue.current;
+			const st = getTrackDisplay(song) || {};
 			const noBgURL = path.join(__dirname, "..", "..", "assets", "no_bg.png");
 
 			const cardImage = await classicCard({
-				imageBg: song.displayThumbnail("maxresdefault") || noBgURL,
-				imageText: song.title,
-				trackStream: song.isStream,
+				imageBg: st.thumbnail || noBgURL,
+				imageText: st.title,
+				trackStream: st.isStream,
 				trackDuration: player.position,
-				trackTotalDuration: song.duration,
+				trackTotalDuration: st.duration,
 			});
 
 			const attachment = new AttachmentBuilder(cardImage, { name: "card.png" });
 
-			var title = escapeMarkdown(song.title);
-			var title = title.replace(/\]/g, "");
-			var title = title.replace(/\[/g, "");
+			var title = escapeMarkdown(st.title).replace(/\]/g, "").replace(/\[/g, "");
 			const embed = new EmbedBuilder()
 				.setColor(client.config.embedColor)
 				.setAuthor({ name: "Now Playing", iconURL: client.config.iconURL })
 				.setFields([
-					{
-						name: "Requested by",
-						value: `${song.requester}`,
-						inline: true,
-					},
+					{ name: "Requested by", value: `${st.requester}`, inline: true },
 				])
-				.setDescription(`[${title}](${song.uri})`)
+				.setDescription(`[${title}](${st.uri})`)
 				.setImage("attachment://card.png");
 			return interaction.editReply({ embeds: [embed], files: [attachment] });
 		}
 
-		const queueGroups = load.chunk(queue, 10);
+		const queueGroups = load.chunk(queueArr, 10);
 		const maxPage = queueGroups.length;
 		let currentPage = 0;
 		let currentGroup = queueGroups[currentPage];
 
 		const song = player.queue.current;
+		const st = getTrackDisplay(song) || {};
 		const noBgURL = path.join(__dirname, "..", "..", "assets", "no_bg.png");
 
 		const cardImage = await classicCard({
-			imageBg: song.displayThumbnail("maxresdefault") || noBgURL,
-			imageText: song.title,
-			trackStream: song.isStream,
+			imageBg: st.thumbnail || noBgURL,
+			imageText: st.title,
+			trackStream: st.isStream,
 			trackDuration: player.position,
-			trackTotalDuration: song.duration,
+			trackTotalDuration: st.duration,
 		});
 
 		const attachment = new AttachmentBuilder(cardImage, { name: "card.png" });
 
-		var title = escapeMarkdown(song.title);
-		var title = title.replace(/\]/g, "");
-		var title = title.replace(/\[/g, "");
+		var title = escapeMarkdown(st.title).replace(/\]/g, "").replace(/\[/g, "");
 
 		const embed = new EmbedBuilder()
 			.setColor(client.config.embedColor)
 			.setAuthor({ name: "Now Playing", iconURL: client.config.iconURL })
 			.setFields([
-				{
-					name: "Requested by",
-					value: `${song.requester}`,
-					inline: true,
-				},
+				{ name: "Requested by", value: `${st.requester}`, inline: true },
 			])
-			.setDescription(`[${title}](${song.uri})`)
+			.setDescription(`[${title}](${st.uri})`)
 			.setImage("attachment://card.png");
 
 		const queueEmbed = new EmbedBuilder()
@@ -126,16 +120,10 @@ const command = new SlashCommand()
 			.setAuthor({ name: "Queue", iconURL: client.config.iconURL })
 			.setDescription(
 				currentGroup
-					.map(
-						(song, index) =>
-							`**${
-								currentPage * 10 + index + 1
-							}**. [${escapeMarkdown(song.title)}](${
-								song.uri
-							}) \`[${pms(song.duration)}]\` | ${
-								song.requester
-							}`
-					)
+					.map((s, index) => {
+						const t = getTrackDisplay(s) || {};
+						return `**${currentPage * 10 + index + 1}**. [${escapeMarkdown(t.title)}](${t.uri}) \`[${pms(t.duration)}]\` | ${t.requester}`;
+					})
 					.join("\n")
 			)
 			.setFooter({ text: `Page ${currentPage + 1} of ${maxPage}` });
@@ -168,16 +156,10 @@ const command = new SlashCommand()
 				.setTitle("Song Queue")
 				.setDescription(
 					currentGroup
-						.map(
-							(song, index) =>
-								`**${
-									currentPage * 10 + index + 1
-								}**. [${escapeMarkdown(
-									song.title
-								)}](${song.uri}) \`[${pms(
-									song.duration
-								)}]\` | ${song.requester}`
-						)
+						.map((s, index) => {
+							const t = getTrackDisplay(s) || {};
+							return `**${currentPage * 10 + index + 1}**. [${escapeMarkdown(t.title)}](${t.uri}) \`[${pms(t.duration)}]\` | ${t.requester}`;
+						})
 						.join("\n")
 				)
 				.setFooter({ text: `Page ${currentPage + 1} of ${maxPage}` });

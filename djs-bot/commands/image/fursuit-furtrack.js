@@ -1,7 +1,14 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
-const puppeteer = require("puppeteer");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const { getRandomInt } = require("../../util/utils.js");
+
+function getPuppeteer() {
+	try {
+		return require("puppeteer");
+	} catch {
+		return null;
+	}
+}
 
 function parseTextDetails(textArray) {
 	const details = {};
@@ -25,10 +32,17 @@ const command = new SlashCommand()
 	.setName("fursuit-furtrack")
 	.setDescription("Get a random image of a fursuit from furtrack.com")
 	.setRun(async (client, interaction) => {
-		await interaction.deferReply({ ephemeral: false });
+		await interaction.deferReply();
+
+		const puppeteer = getPuppeteer();
+		if (!puppeteer) {
+			return interaction.editReply({
+				content: "This command requires the optional dependency `puppeteer`. Install it with: `npm install puppeteer`",
+				flags: MessageFlags.Ephemeral,
+			});
+		}
 
 		const browser = await puppeteer.launch();
-		// Open a new page
 		const page = await browser.newPage();
 
 		setTimeout(() => {
@@ -36,6 +50,7 @@ const command = new SlashCommand()
 			browser.close();
 		}, 30000);
 
+		let url = "";
 		try {
 			let retry = 0;
 			const maxRetry = 5;
@@ -88,13 +103,12 @@ const command = new SlashCommand()
 				.setFooter({ text: `visit -> ${url}` });
 			return interaction.editReply({
 				embeds: [statsEmbed],
-				ephemeral: false,
 			});
 		} catch (err) {
 			console.log(err);
 			return interaction.editReply({
 				content: "fail to get a fursuit photo, sowwy Q.Q",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 	});

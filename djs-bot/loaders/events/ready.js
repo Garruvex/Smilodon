@@ -1,6 +1,7 @@
 const { ActivityType } = require("discord.js");
 const { capitalize, format } = require("../../util/string");
 const Bot = require("../../lib/Bot");
+const { refreshAllControlChannels } = require("../../util/controlChannel");
 // this fires once on the bot being launched, sets the presence for the bot
 
 /**
@@ -47,4 +48,7 @@ module.exports = (client) => {
 	});
 
 	client.info("Successfully logged in as " + client.user.tag);
+
+	// Refresh control channel embeds so they show correct state (or "No song currently playing") after restart
+	refreshAllControlChannels().catch((err) => client.warn("Control channel refresh on ready failed:", err?.message ?? err));
 };

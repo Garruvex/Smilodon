@@ -1,6 +1,7 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const prettyMilliseconds = require("pretty-ms");
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
+const prettyMsModule = require("pretty-ms");
+const prettyMilliseconds = typeof prettyMsModule === "function" ? prettyMsModule : (prettyMsModule?.default ?? prettyMsModule);
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, MessageFlags } = require("discord.js");
 const { embedNoLLNode, redEmbed, colorEmbed } = require("../../util/embeds");
 
 const command = new SlashCommand()
@@ -48,7 +49,7 @@ const command = new SlashCommand()
             desc,
           }),
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     };
 

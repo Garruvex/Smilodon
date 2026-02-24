@@ -1,6 +1,6 @@
 const { assert } = require("console");
 const SlashCommand = require("../../lib/SlashCommand.js");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const { guildSpecificIDs } = require("../../util/utils.js");
 
 const destiny2RaidPhase = ["raid", "掠奪"];
@@ -67,7 +67,7 @@ const command = new SlashCommand()
 					text: `💠${displayName}大大您這次輸出能>5萬嗎?`,
 				});
 			}
-			await interaction.reply({ embeds: [statsEmbed], ephemeral: false });
+			await interaction.reply({ embeds: [statsEmbed] });
 			let replyMessage = await interaction.fetchReply();
 			await replyMessage.react("⭕");
 			await replyMessage.react("✖️");
@@ -163,7 +163,6 @@ const command = new SlashCommand()
 
 					await interaction.editReply({
 						embeds: [statsEmbed],
-						ephemeral: false,
 					});
 					await finalPollMessage.reactions
 						.removeAll()
@@ -181,7 +180,7 @@ const command = new SlashCommand()
 			console.log(e);
 			return interaction.reply({
 				content: "somthing went wrong, please try again",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 	});

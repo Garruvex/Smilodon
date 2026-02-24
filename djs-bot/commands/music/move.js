@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const { spliceQueue } = require("../../util/player");
 
 const command = new SlashCommand()
@@ -44,24 +44,26 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("There's nothing playing."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 
 		let trackNum = Number(track) - 1;
-		if (trackNum < 0 || trackNum > player.queue.length - 1) {
+		const qLen = player.queue?.tracks?.length ?? player.queue?.length ?? 0;
+		if (trackNum < 0 || trackNum > qLen - 1) {
 			return interaction.reply(":x: | **Invalid track number**");
 		}
 
 		let dest = Number(position) - 1;
-		if (dest < 0 || dest > player.queue.length - 1) {
+		if (dest < 0 || dest > qLen - 1) {
 			return interaction.reply(":x: | **Invalid position number**");
 		}
 
-		const thing = player.queue[trackNum];
+		const tracks = player.queue.tracks ?? player.queue;
+		const thing = tracks[trackNum];
 
-		spliceQueue(player, trackNum, 1);
-		spliceQueue(player, dest, 0, thing);
+		await spliceQueue(player, trackNum, 1);
+		await spliceQueue(player, dest, 0, thing);
 
 		return interaction.reply({
 			embeds: [

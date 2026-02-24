@@ -46,11 +46,12 @@ class Bot extends Client {
 			this.getChannel = require("../util/getChannel");
 			this.getLavalink = require("../util/getLavalink");
 
-			this.ms = require("pretty-ms");
+			const prettyMsModule = require("pretty-ms");
+			this.ms = typeof prettyMsModule === "function" ? prettyMsModule : (prettyMsModule?.default ?? prettyMsModule);
 
 			/** @type {WeakSet<import("discord.js").Message>} */
 			this.deletedMessages = new WeakSet();
-			/** @type {Array<import("cosmicord.js").CosmiTrack>} */
+			/** @type {Array<{ info?: { identifier?: string }; identifier?: string }>} */
 			this.playedTracks = new Array();
 
 			this.commandsRan = 0;

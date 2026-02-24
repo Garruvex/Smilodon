@@ -2,8 +2,12 @@ import { FastifyInstance } from 'fastify';
 import * as uws from 'uWebSockets.js';
 import { ERROR_CODES, STATUS_CODES } from '../lib/constants';
 import type DJSBot from '../../../../lib/Bot';
+import type { MusicManagerLike } from '../../../../lib/clients/MusicClient';
 
 export type Bot = DJSBot;
+
+/** Bot type with manager.Engine guaranteed for api usage (avoids resolution issues) */
+export type BotWithEngine = Bot & { manager?: MusicManagerLike };
 
 export type RegisterRouteHandler = Parameters<FastifyInstance['register']>[0];
 

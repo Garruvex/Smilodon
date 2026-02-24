@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const ms = require("ms");
 
 const command = new SlashCommand()
@@ -37,7 +37,7 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("There is no music playing."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		
@@ -51,7 +51,8 @@ const command = new SlashCommand()
 		}
 		const time = rawTime.reduce((a,b) => a + b, 0);
 		const position = player.position;
-		const duration = player.queue.current.duration;
+		const cur = player.queue.current;
+		const duration = cur?.info?.duration ?? cur?.duration ?? 0;
 		
 		if (time <= duration) {
 			player.seek(time);
@@ -60,7 +61,7 @@ const command = new SlashCommand()
 					new EmbedBuilder()
 						.setColor(client.config.embedColor)
 						.setDescription(
-							`⏩ | **${ player.queue.current.title }** has been ${
+							`⏩ | **${ cur?.info?.title ?? cur?.title ?? "Track" }** has been ${
 								time < position? "rewound" : "seeked"
 							} to **${ ms(time) }**`,
 						),

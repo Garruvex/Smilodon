@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 
 module.exports = {
     name: "guildleave",
@@ -21,23 +21,23 @@ module.exports = {
             if (id.toLowerCase() === 'list') {
                 try {
                     const guildList = client.guilds.cache.map(guild => `${guild.name} | ${guild.id}`).join('\n');
-                    return interaction.reply({ content: `Guilds:\n\`${guildList}\``, ephemeral: true });
+                    return interaction.reply({ content: `Guilds:\n\`${guildList}\``, flags: MessageFlags.Ephemeral });
                 } catch (error) {
                     console.error('Error listing guilds:', error);
-                    return interaction.reply({ content: `Check console for list of guilds`, ephemeral: true });
+                    return interaction.reply({ content: `Check console for list of guilds`, flags: MessageFlags.Ephemeral });
                 }
             }
 
             const guild = client.guilds.cache.get(id);
             if (!guild) {
-                return interaction.reply({ content: `\`${id}\` is not a valid guild ID`, ephemeral: true });
+                return interaction.reply({ content: `\`${id}\` is not a valid guild ID`, flags: MessageFlags.Ephemeral });
             }
 
             await guild.leave();
-            return interaction.reply({ content: `Left guild \`${id}\``, ephemeral: true });
+            return interaction.reply({ content: `Left guild \`${id}\``, flags: MessageFlags.Ephemeral });
         } catch (error) {
             console.error(`There was an error trying to leave guild ${id}:`, error);
-            return interaction.reply({ content: `Error leaving guild.`, ephemeral: true });
+            return interaction.reply({ content: `Error leaving guild.`, flags: MessageFlags.Ephemeral });
         }
     },
 };

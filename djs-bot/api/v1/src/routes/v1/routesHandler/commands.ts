@@ -7,7 +7,7 @@ const handler: RouteHandler = async (request, reply) => {
   const bot = getBot();
 
   return createReply({
-    commands: bot.slash.map((command) => ({
+    commands: bot.slash.map((command: { name: string; description: string }) => ({
       name: command.name,
       description: command.description,
     })),

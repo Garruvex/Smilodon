@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const playerUtil = require("../../util/player");
 
 const command = new SlashCommand()
@@ -32,7 +32,7 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("I'm not in a channel."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		

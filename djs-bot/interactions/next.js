@@ -1,6 +1,7 @@
 const SlashCommand = require("../lib/SlashCommand");
 const { ccInteractionHook } = require("../util/interactions");
 const playerUtil = require("../util/player");
+const { MessageFlags } = require("discord.js");
 const { redEmbed } = require("../util/embeds");
 
 const command = new SlashCommand()
@@ -15,16 +16,18 @@ const command = new SlashCommand()
 		const { player, channel, sendError } = data;
 
 		const song = player.queue.current;
-		const status = playerUtil.skip(player);
+		const { getTrackDisplay } = require("../util/utils");
+		const t = getTrackDisplay(song) || {};
+		const status = await playerUtil.skip(player);
 
 		if (status === 1) {
 			return interaction.reply({
 				embeds: [
 					redEmbed({
-						desc: `There is nothing after [${song.title}](${song.uri}) in the queue.`,
+						desc: `There is nothing after [${t.title || "this track"}](${t.uri || ""}) in the queue.`,
 					}),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 

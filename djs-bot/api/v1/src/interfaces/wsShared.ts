@@ -1,14 +1,13 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // "Shared Types"
-// Must be in sync with dashboard interfaces
+// Must be in sync with dashboard interfaces (Lavalink-Client track shape)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// these 2 interface are just dumb
-export interface ICosmiTrack {
+export interface ITrack {
   id: number;
   duration?: number;
-  requesterId?: string | undefined;
-  encoded?: string | undefined;
+  requesterId?: string;
+  encoded?: string;
   identifier?: string;
   isSeekable?: boolean;
   author?: string;
@@ -17,25 +16,11 @@ export interface ICosmiTrack {
   position?: number;
   title?: string;
   sourceName?: string;
-  uri?: string | undefined;
-}
-
-// !TODO: Need to unify these, or maybe just use the common prop between both
-export interface IErelaTrack {
-  id: number;
-  track?: string;
-  title?: string;
-  identifier?: string;
-  author?: string;
-  duration?: number;
-  isSeekable?: boolean;
-  isStream?: boolean;
   uri?: string;
+  track?: string;
   thumbnail?: string | null;
   requester?: unknown;
 }
-
-export type ITrack = ICosmiTrack & IErelaTrack;
 
 export const enum ESocketEventType {
   ERROR,

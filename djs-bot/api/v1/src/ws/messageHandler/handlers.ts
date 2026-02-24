@@ -12,10 +12,8 @@ import { handlePause, handleQueueUpdate } from '../eventsHandler';
 import * as playerUtil from '../../utils/player';
 
 // very funny
-import {
-  CosmicordPlayerExtended,
-  MusicClient,
-} from '../../../../../lib/clients/MusicClient';
+import type { MusicClient, LavalinkPlayer } from '../../../../../lib/clients/MusicClient';
+import type { BotWithEngine } from '../../interfaces/common';
 
 function getTypeOfValidator<T extends ESocketEventType>(
   type: string,
@@ -29,7 +27,7 @@ function wsUseGuildPlayerRoutine<T extends ESocketEventType>(
   ev: ISocketEvent<T>,
   isArgumentValid?: (ev: ISocketEvent<T>) => string | undefined,
 ): ReturnType<MusicClient['players']['get']> {
-  const bot = getBot(true);
+  const bot = getBot(true) as BotWithEngine | undefined;
 
   if (!bot) {
     wsSendJson(
@@ -112,10 +110,14 @@ export async function handlePauseEvent(
 
   if (!player || ev.d === null) return;
 
-  player.pause(ev.d);
+  if (ev.d) {
+    player.pause();
+  } else {
+    player.resume();
+  }
 
   handlePause({
-    guildId: (player as CosmicordPlayerExtended).guild,
+    guildId: player.guildId,
     state: player.paused,
   });
 }
@@ -128,7 +130,7 @@ export async function handlePreviousEvent(
 
   if (!player) return;
 
-  await playerUtil.playPrevious(player as CosmicordPlayerExtended);
+  await playerUtil.playPrevious(player);
 }
 
 export async function handleNextEvent(
@@ -139,7 +141,7 @@ export async function handleNextEvent(
 
   if (!player) return;
 
-  playerUtil.skip(player as CosmicordPlayerExtended);
+  await playerUtil.skip(player);
 }
 
 export async function handleUpdateQueueEvent(
@@ -153,7 +155,8 @@ export async function handleUpdateQueueEvent(
   if (!player) return;
 
   const pq = player.queue;
-  const qLen = pq.length;
+  const qArr = Array.from(pq.tracks ?? (Array.isArray(pq) ? pq : []));
+  const qLen = qArr.length;
 
   if (!qLen) {
     wsSendJson(ws, createErrPayload(ESocketErrorCode.BAD_REQUEST, 'No track'));
@@ -171,21 +174,14 @@ export async function handleUpdateQueueEvent(
     return;
   }
 
-  const newQueue = [];
+  const newQueue = idxs.map((i) => qArr[i]);
 
-  for (let i = 0; i < idLen; i++) {
-    newQueue.push(pq[idxs[i]]);
-  }
-
-  player.queue.clear();
-
-  for (const t of newQueue) {
-    player.queue.add(t);
-  }
+  await pq.splice(0, qLen);
+  await pq.add(newQueue);
 
   handleQueueUpdate({
-    guildId: (player as CosmicordPlayerExtended).guild,
-    player: player as CosmicordPlayerExtended,
+    guildId: player.guildId,
+    player,
   });
 }
 
@@ -200,7 +196,8 @@ export async function handleRemoveTrackEvent(
   if (!player) return;
 
   const pq = player.queue;
-  const qLen = pq.length;
+  const tracks = pq.tracks ?? pq;
+  const qLen = Array.isArray(tracks) ? tracks.length : (tracks?.length ?? 0);
 
   if (!qLen) {
     wsSendJson(ws, createErrPayload(ESocketErrorCode.BAD_REQUEST, 'No track'));
@@ -217,10 +214,10 @@ export async function handleRemoveTrackEvent(
     return;
   }
 
-  player.queue.remove(idx);
+  await pq.remove(idx);
 
   handleQueueUpdate({
-    guildId: (player as CosmicordPlayerExtended).guild,
-    player: player as CosmicordPlayerExtended,
+    guildId: player.guildId,
+    player,
   });
 }

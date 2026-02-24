@@ -1,7 +1,7 @@
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const SlashCommand = require("../../lib/SlashCommand");
 
-//@TODO update this command to be compatible with cosmicord v1.1.0
+// @TODO update this command for Lavalink-Client filters if needed
 const command = new SlashCommand()
 	.setName("filters")
 	.setDescription("add or remove filters")
@@ -53,7 +53,7 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("There's no music playing."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		

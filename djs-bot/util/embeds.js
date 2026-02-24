@@ -1,8 +1,12 @@
 const { getClient } = require("../bot");
-const prettyMilliseconds = require("pretty-ms");
+const prettyMsModule = require("pretty-ms");
+const prettyMilliseconds =
+	typeof prettyMsModule === "function"
+		? prettyMsModule
+		: (prettyMsModule?.default ?? prettyMsModule);
 const { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require("discord.js");
 const { escapeMarkdown } = require("discord.js");
-const { showPlayerPositionBar, trackUpdateEmbed } = require("./utils.js");
+const { getTrackDisplay, showPlayerPositionBar } = require("./utils.js");
 
 /**
  * @typedef {object} ColorEmbedParams
@@ -63,58 +67,69 @@ const embedClearedQueue = () =>
 
 /**
  * @typedef {object} TrackStartedEmbedParams
- * @property {import("cosmicord.js").CosmiTrack=} track
- * @property {import("../lib/clients/MusicClient").CosmicordPlayerExtended} player
+ * @property {import("../lib/MusicEvents").ILavalinkTrack=} track
+ * @property {import("../lib/clients/MusicClient").LavalinkPlayer} player
  * @property {string=} title
+ * @property {boolean} [largeArtwork] - If true, use embed image (large) instead of thumbnail (small). Use for control channel.
  *
  * @param {TrackStartedEmbedParams}
  */
-const trackStartedEmbed = ({ track, player, title = "Now playing", isPause = false } = {}) => {
+const trackStartedEmbed = ({
+	track,
+	player,
+	title = "Now playing <:now_playing:1172239599586770975>",
+	largeArtwork = false,
+} = {}) => {
 	const client = getClient();
-
+	const t = getTrackDisplay(track);
 	const embed = new EmbedBuilder().setColor(client.config.embedColor);
 
-	if (track) {
+	if (track && t) {
 		let playerPosition;
 		try {
-			playerPosition = player.position;
-			// Explicitly check if playerPosition is undefined after trying to assign it.
-			if (playerPosition === undefined) {
-				throw new Error("player.position is undefined");
-			}
+			playerPosition = player?.position ?? 0;
+			if (playerPosition === undefined) playerPosition = 0;
 		} catch (err) {
 			playerPosition = 0;
-			// console.error("Error retrieving player position:", err);
 		}
+		const queueLen =
+			player?.queue?.tracks?.length ??
+			player?.queue?.size ??
+			player?.queue?.length ??
+			0;
 		embed.setAuthor({ name: title, iconURL: client.config.iconURL })
-			.setDescription(`[${track.title}](${track.uri})`)
+			.setDescription(`[${t.title}](${t.uri})`)
 			.addFields([
 				{
 					name: "Requested by",
-					value: `${track.requester}`,
+					value: `@${t.requester}`,
+					inline: true,
+				},
+				{
+					name: "Queue",
+					value: `${queueLen}`,
 					inline: true,
 				},
 				{
 					name: "Duration",
-					value: track.isStream
+					value: t.isStream
 						? `\`LIVE 🔴\``
 						: `\`${prettyMilliseconds(playerPosition, {
 								secondsDecimalDigits: 0,
-						  })}\` ${showPlayerPositionBar(
+							})}\` ${showPlayerPositionBar(
 								playerPosition,
-								track.duration,
+								t.duration,
 								isPause
-						  )} \`${prettyMilliseconds(track.duration, {
+							)} \`${prettyMilliseconds(t.duration, {
 								secondsDecimalDigits: 0,
-						  })}\``,
+							})}\``,
 					inline: false,
 				},
 			]);
 
-		try {
-			embed.setThumbnail(track.displayThumbnail("maxresdefault"));
-		} catch (err) {
-			embed.setThumbnail(track.thumbnail);
+		if (t.thumbnail) {
+			if (largeArtwork) embed.setImage(t.thumbnail);
+			else embed.setThumbnail(t.thumbnail);
 		}
 
 		if (player) addPlayerStateFooter(player, embed);
@@ -130,15 +145,23 @@ const trackStartedEmbed = ({ track, player, title = "Now playing", isPause = fal
 };
 
 /**
+ * Builds the control channel message payload (embeds + components).
+ * All control channel content lives here; callers only pass this to message.edit().
  * @typedef {object} ControlChannelMessageParams
  * @property {string} guildId
  * @property {TrackStartedEmbedParams["track"]} track
- *
+ * @property {boolean} [isPause]
  * @param {ControlChannelMessageParams}
- * @returns {import("discord.js").MessagePayload | import("discord.js").MessageCreateOptions}
+ * @returns {import("discord.js").MessageCreateOptions}
  */
 const controlChannelMessage = ({ guildId, track, isPause = false } = {}) => {
-	const player = guildId ? getClient().manager.Engine.players.get(guildId) : undefined;
+	const client = getClient();
+	const engine = client?.manager?.Engine;
+	// Lavalink-Client may expose getPlayer(guildId) and/or .players Map; support both
+	const player =
+		(typeof engine?.getPlayer === "function" ? engine.getPlayer(guildId) : null) ??
+		engine?.players?.get?.(guildId) ??
+		undefined;
 
 	const prev = new ButtonBuilder()
 		.setCustomId("cc/prev")
@@ -177,6 +200,12 @@ const controlChannelMessage = ({ guildId, track, isPause = false } = {}) => {
 		.setStyle(ButtonStyle.Secondary)
 		.setEmoji("♾️");
 
+	const twentyFourSeven = new ButtonBuilder()
+		.setCustomId("cc/247")
+		.setStyle(ButtonStyle.Secondary)
+		.setEmoji("🕐")
+		.setLabel("24/7");
+
 	const shuffle = new ButtonBuilder()
 		.setCustomId("cc/shuffle")
 		.setStyle(ButtonStyle.Secondary)
@@ -186,36 +215,49 @@ const controlChannelMessage = ({ guildId, track, isPause = false } = {}) => {
 		lowerVolume,
 		louderVolume,
 		autoqueue,
+		twentyFourSeven,
 		shuffle
 	);
 
 	const components = [firstRow, secondRow];
 
+	// Use trackStartedEmbed for control channel with large artwork (embed image instead of thumbnail)
+	const embed = trackStartedEmbed({
+		track,
+		player,
+		title: "Now playing",
+		isPause,
+		largeArtwork: true,
+	});
+	// Serialize to plain objects so message.edit() always gets valid API payload
+	const embedData = embed
+		? embed.toJSON()
+		: new EmbedBuilder().setColor(client?.config?.embedColor ?? 0).setTitle("No song currently playing").toJSON();
 	return {
 		content: "Join a voice channel and queue songs by name or url in here.",
-		embeds: [trackUpdateEmbed({ track, player, isPause })],
+		embeds: [embedData],
 		components,
 	};
 };
 
 /**
  * @typedef {object} AddQueueEmbedParams
- * @property {import("cosmicord.js").CosmiTrack} track
- * @property {import("../lib/clients/MusicClient").CosmicordPlayerExtended} player
+ * @property {import("../lib/MusicEvents").ILavalinkTrack} track
+ * @property {import("../lib/clients/MusicClient").LavalinkPlayer} player
  * @property {string} requesterId
  *
  * @param {AddQueueEmbedParams}
  */
 const addQueueEmbed = ({ track, player, requesterId }) => {
 	const client = getClient();
-
-	const title = escapeMarkdown(track.title).replace(/\]|\[/g, "");
+	const t = getTrackDisplay(track) || {};
+	const title = escapeMarkdown(t.title || "Unknown").replace(/\]|\[/g, "");
 
 	const embed = new EmbedBuilder()
 		.setColor(client.config.embedColor)
 		.setAuthor({ name: "Added to queue", iconURL: client.config.iconURL })
-		.setDescription(title ? `[${title}](${track.uri})` : "No Title")
-		.setURL(track.uri)
+		.setDescription(title ? `[${title}](${t.uri})` : "No Title")
+		.setURL(t.uri)
 		.addFields([
 			{
 				name: "Added by",
@@ -224,27 +266,25 @@ const addQueueEmbed = ({ track, player, requesterId }) => {
 			},
 			{
 				name: "Duration",
-				value: track.isStream
+				value: t.isStream
 					? `\`LIVE 🔴 \``
-					: `\`${client.ms(track.duration, {
+					: `\`${client.ms(t.duration, {
 							colonNotation: true,
 							secondsDecimalDigits: 0,
-					  })}\``,
+						})}\``,
 				inline: true,
 			},
 		]);
 
-	try {
-		embed.setThumbnail(track.displayThumbnail("maxresdefault"));
-	} catch (err) {
-		embed.setThumbnail(track.thumbnail);
-	}
+	if (t.thumbnail) embed.setThumbnail(t.thumbnail);
 
-	if (player.queue.totalSize > 1) {
+	const tracksLen = player.queue?.tracks?.length ?? player.queue?.size ?? 0;
+	const totalSize = (player.queue?.current ? 1 : 0) + tracksLen;
+	if (totalSize > 1) {
 		embed.addFields([
 			{
 				name: "Position in queue",
-				value: `${player.queue.size}`,
+				value: `${tracksLen}`,
 				inline: true,
 			},
 		]);
@@ -255,13 +295,25 @@ const addQueueEmbed = ({ track, player, requesterId }) => {
 
 /**
  * @typedef {object} LoadedPlaylistEmbedParams
- * @property {import("cosmicord.js").CosmiLoadedTracks} searchResult
+ * @property {{ loadType?: string; tracks?: unknown[]; playlist?: { name?: string; duration?: number } }} searchResult
  * @property {string} query
  *
  * @param {LoadedPlaylistEmbedParams}
  */
 const loadedPlaylistEmbed = ({ searchResult, query }) => {
 	const client = getClient();
+	const { getTrackDisplay } = require("./utils.js");
+	const first = searchResult.tracks?.[0];
+	const thumb = first
+		? (getTrackDisplay(first)?.thumbnail ?? first.info?.artworkUrl ?? first.thumbnail)
+		: null;
+	const pl = searchResult.playlist ?? {};
+	const duration =
+		pl.duration ??
+		(searchResult.tracks || []).reduce(
+			(acc, t) => acc + (t.info?.duration ?? t.duration ?? 0),
+			0
+		);
 
 	const embed = new EmbedBuilder()
 		.setColor(client.config.embedColor)
@@ -269,23 +321,23 @@ const loadedPlaylistEmbed = ({ searchResult, query }) => {
 			name: "Playlist added to queue",
 			iconURL: client.config.iconURL,
 		})
-		.setThumbnail(searchResult.tracks[0].thumbnail)
-		.setDescription(`[${searchResult.playlist.name}](${query})`)
-		.addFields([
-			{
-				name: "Enqueued",
-				value: `\`${searchResult.tracks.length}\` songs`,
-				inline: true,
-			},
-			{
-				name: "Playlist duration",
-				value: `\`${client.ms(searchResult.playlist.duration, {
-					colonNotation: true,
-					secondsDecimalDigits: 0,
-				})}\``,
-				inline: true,
-			},
-		]);
+		.setDescription(`[${pl.name ?? "Playlist"}](${query})`);
+	if (thumb) embed.setThumbnail(thumb);
+	embed.addFields([
+		{
+			name: "Enqueued",
+			value: `\`${(searchResult.tracks || []).length}\` songs`,
+			inline: true,
+		},
+		{
+			name: "Playlist duration",
+			value: `\`${client.ms(duration, {
+				colonNotation: true,
+				secondsDecimalDigits: 0,
+			})}\``,
+			inline: true,
+		},
+	]);
 
 	return embed;
 };
@@ -315,7 +367,7 @@ const historyEmbed = ({ history }) => {
 };
 
 /**
- * @param {import("../lib/clients/MusicClient").CosmicordPlayerExtended} player
+ * @param {import("../lib/clients/MusicClient").LavalinkPlayer} player
  * @param {EmbedBuilder} embed
  */
 const addPlayerStateFooter = (player, embed) => {
@@ -323,13 +375,9 @@ const addPlayerStateFooter = (player, embed) => {
 		["autoqueue", !!player.get("autoQueue")],
 		["24/7", !!player.get("twentyFourSeven")],
 	];
-
 	const shownStates = states.filter((state) => state[1]);
-
 	if (shownStates.length)
-		embed.setFooter({
-			text: shownStates.map((state) => state[0]).join(" • "),
-		});
+		embed.setFooter({ text: shownStates.map((s) => s[0]).join(" • ") });
 };
 
 function getButtons(pageNo, maxPages) {

@@ -14,8 +14,10 @@ const command = new SlashCommand()
 		const { player, channel, sendError } = data;
 
 		if (player.paused) {
-			pause(player, false);
-		} else pause(player,true);
+			await pause(player, false);
+		} else {
+			await pause(player, true);
+		}
 
 		return interaction.deferUpdate();
 	});

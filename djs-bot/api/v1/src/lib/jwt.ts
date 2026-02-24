@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import APIError from './APIError';
 const { JWT_SECRET_KEY } = process.env;
 

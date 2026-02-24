@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 
 module.exports = {
 	name: "reload",
@@ -36,7 +36,7 @@ module.exports = {
 					.setFooter({text: `${client.user.username} was reloaded by ${interaction.user.username}`})
 					.setTimestamp(),
 				], 
-				ephemeral: true
+				flags: MessageFlags.Ephemeral
 			});
 		} catch (err) {
 			client.error(err + `\nIn: ${interaction.member.guild.name} - ${interaction.member.guild.id}\n On shard: ${interaction.member.guild.shardId}`);
@@ -45,7 +45,7 @@ module.exports = {
 				embeds: [new EmbedBuilder().setColor("Red")
 				.setDescription("OOPSIE WOOPSIE!! Uwu We made a fucky wucky!! A wittle fucko boingo! The code monkeys at our headquarters are working VEWY HAWD to fix this!")
 				.setFooter({text: "In short... I don't know what happened... But you can ask a bot dev to look into it :D"})], 
-				ephemeral: true
+				flags: MessageFlags.Ephemeral
 			})
 		}
 	}

@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const playerUtil = require("../../util/player");
 const { redEmbed } = require("../../util/embeds");
 
@@ -32,7 +32,7 @@ const command = new SlashCommand()
 					.setColor("Red")
 					.setDescription("There are no previous songs for this session."),
 			],
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 	}
 

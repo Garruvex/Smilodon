@@ -1,5 +1,5 @@
 const colors = require("colors");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const SlashCommand = require("../../lib/SlashCommand");
 
 const command = new SlashCommand()
@@ -11,10 +11,8 @@ const command = new SlashCommand()
 			return;
 		}
 		
-		let player;
-		if (client.manager.Engine) {
-			player = client.manager.Engine.players.get(interaction.guild.id);
-		} else {
+		const engine = client.manager?.Engine;
+		if (!engine) {
 			return interaction.reply({
 				embeds: [
 					new EmbedBuilder()
@@ -23,6 +21,10 @@ const command = new SlashCommand()
 				],
 			});
 		}
+		const player =
+			(typeof engine.getPlayer === "function" ? engine.getPlayer(interaction.guild.id) : null) ??
+			engine.players?.get?.(interaction.guild.id) ??
+			null;
 		
 		if (!player) {
 			return interaction.reply({
@@ -31,7 +33,7 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("There's nothing to play 24/7."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		
@@ -50,19 +52,17 @@ const command = new SlashCommand()
 		  .setFooter({
 		    text: `The bot will ${!twentyFourSeven ? "now" : "no longer"} stay connected to the voice channel 24/7.`
       });
+		const gid = player.guildId ?? player.guild ?? player.options?.guild;
 		client.warn(
-			`Player: ${ player.options.guild } | [${ colors.blue(
-				"24/7",
-			) }] has been [${ colors.blue(
-				!twentyFourSeven? "ENABLED" : "DISABLED",
-			) }] in ${
-				client.guilds.cache.get(player.options.guild)
-					? client.guilds.cache.get(player.options.guild).name
-					: "a guild"
+			`Player: ${gid} | [${colors.blue("24/7")}] has been [${colors.blue(
+				!twentyFourSeven ? "ENABLED" : "DISABLED",
+			)}] in ${
+				client.guilds.cache.get(gid) ? client.guilds.cache.get(gid).name : "a guild"
 			}`,
 		);
 		
-		if (!player.playing && player.queue.totalSize === 0 && twentyFourSeven) {
+		const queueLen = (player.queue?.tracks?.length ?? 0) + (player.queue?.current ? 1 : 0);
+		if (!player.playing && queueLen === 0 && twentyFourSeven) {
 			player.destroy();
 		}
 		

@@ -1,4 +1,5 @@
 const SlashCommand = require("../lib/SlashCommand");
+const { MessageFlags } = require("discord.js");
 const { redEmbed } = require("../util/embeds");
 const { ccInteractionHook } = require("../util/interactions");
 const playerUtil = require("../util/player");
@@ -23,7 +24,7 @@ const command = new SlashCommand()
 						desc: "There is no previous song in the queue.",
 					}),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 
 		return interaction.deferUpdate();

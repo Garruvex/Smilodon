@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const { clearQueue } = require("../../util/player");
 
 const command = new SlashCommand()
@@ -31,21 +31,22 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("Nothing is playing right now."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 
-		if (!player.queue || !player.queue.length || player.queue.length === 0) {
+		const queueLen = player.queue?.tracks?.length ?? player.queue?.length ?? 0;
+		if (!player.queue || queueLen === 0) {
 			let cembed = new EmbedBuilder()
 				.setColor(client.config.embedColor)
 				.setDescription(
 					"❌ | **Invalid, Not enough track to be cleared.**"
 				);
 
-			return interaction.reply({ embeds: [cembed], ephemeral: true });
+			return interaction.reply({ embeds: [cembed], flags: MessageFlags.Ephemeral });
 		}
 
-		clearQueue(player);
+		await clearQueue(player);
 
 		let clearEmbed = new EmbedBuilder()
 			.setColor(client.config.embedColor)

@@ -4,7 +4,8 @@ const {
 	StringSelectMenuBuilder,
 	ButtonBuilder,
 	ButtonStyle,
-	EmbedBuilder
+	EmbedBuilder,
+	MessageFlags,
 } = require("discord.js");
 const { Rlyrics } = require("rlyrics");
 const lyricsApi = new Rlyrics();
@@ -60,7 +61,8 @@ const command = new SlashCommand()
 			"Instrumental", "Live", "Acoustic", "Cover", "\\(feat\\. .*\\)"
 		];
 		if (!args) {
-			currentTitle = player.queue.current.title;
+			const cur = player.queue.current;
+			currentTitle = cur?.info?.title ?? cur?.title ?? "";
 			currentTitle = currentTitle
 				.replace(new RegExp(phrasesToRemove.join('|'), 'gi'), '')
 				.replace(/\s*([\[\(].*?[\]\)])?\s*(\|.*)?\s*(\*.*)?$/, '');
@@ -219,7 +221,7 @@ const command = new SlashCommand()
                                 2. Try to search the lyrics manually by providing the song query using your keyboard.\n\
                                 3. Avoid searching lyrics in languages other than English.`,
 							),
-					], ephemeral: true, components: []
+					], flags: MessageFlags.Ephemeral, components: []
 				});
 			};
 		});

@@ -4,6 +4,7 @@ const {
 	EmbedBuilder,
 	CommandInteractionOptionResolver,
 	CommandInteraction,
+	MessageFlags,
 } = require("discord.js");
 const { getClient } = require("../bot");
 const { permissionsConfigMessageMapper } = require("../util/common");
@@ -204,7 +205,7 @@ class SlashCommand extends SlashCommandBuilder {
 		if (errorMessage)
 			return interaction.reply({
 				content: errorMessage,
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 
 		return SlashCommand.checkPermission(config, interaction);
@@ -335,7 +336,7 @@ class SlashCommand extends SlashCommandBuilder {
 
 		return interaction.reply({
 			embeds: [missingPermsEmbed],
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 	}
 
@@ -363,7 +364,7 @@ class SlashCommand extends SlashCommandBuilder {
 		} catch (err) {
 			return interaction[interaction.replied ? "editReply" : "reply"]({
 				content: err.message,
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 	}

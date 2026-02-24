@@ -1,3 +1,4 @@
+const { MessageFlags } = require("discord.js");
 const { capitalize } = require("../../../util/string");
 const yt = require("youtube-sr").default;
 const { reply } = require("../../../util/commands");
@@ -211,7 +212,7 @@ async function runAdd(client, interaction, options) {
 
 	if (isPLaylist) {
 		await interaction.deferReply({
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 
 		let i = 0;

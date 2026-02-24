@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 
 const command = new SlashCommand()
 	.setName("loopq")
@@ -30,14 +30,13 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("There is no music playing."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		
-		if (player.setQueueRepeat(!player.queueRepeat)) {
-			;
-		}
-		const queueRepeat = player.queueRepeat? "enabled" : "disabled";
+		const nextMode = player.repeatMode === "queue" ? "off" : "queue";
+		await player.setRepeatMode(nextMode);
+		const queueRepeat = player.repeatMode === "queue" ? "enabled" : "disabled";
 		
 		interaction.reply({
 			embeds: [

@@ -1,3 +1,4 @@
+const { MessageFlags } = require("discord.js");
 const { capitalize } = require("../../../util/string");
 const { colorEmbed } = require("../../../util/embeds");
 const { reply } = require("../../../util/commands");
@@ -76,5 +77,5 @@ async function runView(client, interaction, options) {
 			iconURL: interaction.user.displayAvatarURL({ dynamic: true }),
 		});
 
-	return interaction.reply({ embeds: [embed], ephemeral: true });
+	return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 }

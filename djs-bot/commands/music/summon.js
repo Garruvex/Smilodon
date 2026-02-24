@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 
 const command = new SlashCommand()
 	.setName("summon")
@@ -12,22 +12,19 @@ const command = new SlashCommand()
 				.setDescription(
 					"❌ | **You must be in a voice channel to use this command.**",
 				);
-			return interaction.reply({ embeds: [joinEmbed], ephemeral: true });
+			return interaction.reply({ embeds: [joinEmbed], flags: MessageFlags.Ephemeral });
 		}
 		
 		let player = client.manager.Engine.players.get(interaction.guild.id);
 		if (!player) {
 			player = client.manager.Engine.createPlayer({
 				guildId: interaction.guild.id,
-				voiceChannel: channel.id,
-				textChannel: interaction.channel.id,
+				voiceChannelId: channel.id,
+				textChannelId: interaction.channel.id,
 			});
-			player.connect(true);
-		}
-		
-		if (channel.id !== player.voiceChannel) {
-			player.setVoiceChannel(channel.id);
-			player.connect();
+			await player.connect();
+		} else if (channel.id !== (player.voiceChannelId ?? player.voiceChannel)) {
+			await player.changeVoiceState({ voiceChannelId: channel.id });
 		}
 		
 		interaction.reply({

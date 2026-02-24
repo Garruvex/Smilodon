@@ -1,12 +1,18 @@
 {
-  "extends": ["@tsconfig/node16/tsconfig.json"],
+  "extends": "@tsconfig/node20/tsconfig.json",
   "compilerOptions": {
     "sourceMap": true,
     "allowJs": false,
     "alwaysStrict": true,
     "strict": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "target": "ES2020",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["./dist/**/*"]
+  "exclude": ["./dist/**"]
 }

@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 
 const { optionsLanguageList } = require("../../util/languageList.js");
 
@@ -31,7 +31,7 @@ const command = new SlashCommand()
 	.setRun(async (client, interaction) => {
 		const query = interaction.options.getString("query");
 		const language = interaction.options.getString("language") || "zh-TW";
-		await interaction.deferReply({ ephemeral: false });
+		await interaction.deferReply();
 		try {
 			const result = await translate(query, {
 				to: "auto",
@@ -60,12 +60,12 @@ const command = new SlashCommand()
 						interaction.user.username,
 					iconURL: interaction.user.displayAvatarURL(),
 				});
-			return interaction.editReply({ embeds: [statsEmbed], ephemeral: false });
+			return interaction.editReply({ embeds: [statsEmbed] });
 		} catch (e) {
 			console.log(e);
 			return interaction.editReply({
 				content: "somthing went wrong, please try again",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 	});

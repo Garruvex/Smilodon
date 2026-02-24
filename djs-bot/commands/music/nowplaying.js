@@ -2,6 +2,7 @@ const {
   EmbedBuilder,
   escapeMarkdown,
   AttachmentBuilder,
+  MessageFlags,
 } = require("discord.js");
 const SlashCommand = require("../../lib/SlashCommand");
 const { classicCard } = require("songcard");
@@ -36,7 +37,7 @@ const command = new SlashCommand()
             .setColor("Red")
             .setDescription("The bot isn't in a channel."),
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -47,39 +48,41 @@ const command = new SlashCommand()
             .setColor("Red")
             .setDescription("There's nothing playing."),
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     const song = player.queue.current;
+    const { getTrackDisplay } = require("../../util/utils");
+    const t = getTrackDisplay(song) || {};
 
     const noBgURL = path.join(__dirname, "..", "..", "assets", "no_bg.png");
+    const thumb = t.thumbnail || (typeof song?.displayThumbnail === "function" ? song.displayThumbnail("maxresdefault") : null);
 
     const cardImage = await classicCard({
-      imageBg: song.displayThumbnail("maxresdefault") || noBgURL,
-      imageText: song.title,
-      trackStream: song.isStream,
+      imageBg: thumb || noBgURL,
+      imageText: t.title,
+      trackStream: t.isStream,
       trackDuration: player.position,
-      trackTotalDuration: song.duration,
+      trackTotalDuration: t.duration,
     });
 
     const attachment = new AttachmentBuilder(cardImage, { name: "card.png" });
 
-    var title = escapeMarkdown(song.title);
-    var title = title.replace(/\]/g, "");
-    var title = title.replace(/\[/g, "");
+    const requesterId = song?.requester?.id ?? song?.userData?.requester?.id ?? "";
+    var title = escapeMarkdown(t.title);
+    title = title.replace(/\]/g, "").replace(/\[/g, "");
     const embed = new EmbedBuilder()
       .setColor(client.config.embedColor)
       .setAuthor({ name: "Now Playing", iconURL: client.config.iconURL })
-      // show who requested the song via setField, also show the duration of the song
       .setFields([
         {
           name: "Requested by",
-          value: `<@${song.requester.id}>`,
+          value: requesterId ? `<@${requesterId}>` : t.requester,
           inline: true,
         },
       ])
-      .setDescription(`[${title}](${song.uri})`)
+      .setDescription(`[${title}](${t.uri})`)
       .setImage("attachment://card.png");
     return interaction.reply({ embeds: [embed], files: [attachment] });
   });

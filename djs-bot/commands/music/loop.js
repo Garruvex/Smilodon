@@ -1,5 +1,5 @@
 const SlashCommand = require("../../lib/SlashCommand");
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 
 const command = new SlashCommand()
 	.setName("loop")
@@ -30,14 +30,13 @@ const command = new SlashCommand()
 						.setColor("Red")
 						.setDescription("Nothing is playing right now."),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 		
-		if (player.setTrackRepeat(!player.trackRepeat)) {
-			;
-		}
-		const trackRepeat = player.trackRepeat? "enabled" : "disabled";
+		const nextMode = player.repeatMode === "track" ? "off" : "track";
+		await player.setRepeatMode(nextMode);
+		const trackRepeat = player.repeatMode === "track" ? "enabled" : "disabled";
 		
 		interaction.reply({
 			embeds: [
