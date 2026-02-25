@@ -189,13 +189,31 @@ function showPlayerPositionBar(currentPosition, totalDuration, isPause = false, 
 async function fetchData(url) {
 	try {
 		const response = await fetch(url);
-		const data = await response.json();
+		const contentType = response.headers.get("content-type") ?? "";
 
-		// Use 'data' here outside of the fetch block but still inside the async function
-		console.log(data);
+		if (!response.ok) {
+			const text = await response.text();
+			console.error(
+				`fetchData: ${url} returned ${response.status} ${response.statusText}`,
+				text.slice(0, 200)
+			);
+			return null;
+		}
+
+		if (!contentType.includes("application/json")) {
+			const text = await response.text();
+			console.error(
+				`fetchData: ${url} returned non-JSON (${contentType}). Body starts with:`,
+				text.slice(0, 100)
+			);
+			return null;
+		}
+
+		const data = await response.json();
 		return data;
 	} catch (error) {
 		console.error("Error fetching data:", error);
+		return null;
 	}
 }
 
@@ -238,7 +256,8 @@ async function getE621ImageAndReply(
 
 	const maxLength = 1000;
 
-	const data = (await fetchData(baseURL)).posts[0];
+	const raw = await fetchData(baseURL);
+	const data = raw?.posts?.[0];
 	if (data === undefined) {
 		return await interaction.reply({
 			embeds: [

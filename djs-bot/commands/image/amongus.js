@@ -1,8 +1,6 @@
 const SlashCommand = require("../../lib/SlashCommand");
 const { EmbedBuilder, MessageFlags } = require("discord.js");
 
-const { fetchData } = require("../../util/utils.js");
-
 const SRA_BASE = "https://some-random-api.com/premium/amongus";
 
 const command = new SlashCommand()
@@ -32,14 +30,8 @@ const command = new SlashCommand()
 			url.searchParams.set("username", username);
 			url.searchParams.set("impostor", String(impostor));
 
-			const data = await fetchData(url.toString());
-			const imageUrl = data?.link ?? data?.image ?? data?.url;
-			if (!imageUrl) {
-				return interaction.reply({
-					content: "API did not return an image. Try again later.",
-					flags: MessageFlags.Ephemeral,
-				});
-			}
+			// API returns the image directly at this URL (like img.src), not JSON
+			const imageUrl = url.toString();
 
 			const embed = new EmbedBuilder()
 				.setTitle(impostor ? "🔴 Impostor" : "Crewmate")
