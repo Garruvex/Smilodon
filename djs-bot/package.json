@@ -1,8 +1,8 @@
 {
-  "description": "",
+  "description": "A Blue Smilodon Bot for Music and more",
   "main": "index.js",
-  "version": "5.5.1",
-  "name": "discord-musicbot",
+  "version": "6.0.5",
+  "name": "SmilodonBot#7244",
   "engines": {
     "node": ">=20.0.0"
   },
