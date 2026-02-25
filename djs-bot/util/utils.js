@@ -350,18 +350,14 @@ async function getE621ImageAndReply(
 		console.log(`File size: ${fileSize} bytes`);
 		console.log(`Media URL: ${mediaURL}`);
 		console.log(`postLink: ${postLink}`);
-		const row = new ActionRowBuilder().addComponents(
+
+		const buttons = [
 			new ButtonBuilder()
-				.setLabel("View Post")
-				.setEmoji("🌐") // Globe emoji for the website
+				.setLabel('View Post')
+				.setEmoji('🌐')
 				.setStyle(ButtonStyle.Link)
-				.setURL(postLink),
-			new ButtonBuilder()
-				.setLabel(isVideo ? "Direct Video" : "Direct Image")
-				.setEmoji(isVideo ? "🎬" : "🖼️") // Movie clapper for video, picture for image
-				.setStyle(ButtonStyle.Link)
-				.setURL(mediaURL)
-		);
+				.setURL(postLink)
+		];
 
 		if (mediaURL) {
 			const extension = data.file.ext;
@@ -381,6 +377,14 @@ async function getE621ImageAndReply(
 					content: `🔍 **Search Result for:** \`${userQuery || "RANDOM"}\`\n📽️ **File too large for upload. Click to reveal:**\n|| ${mediaURL} ||`,
 				});
 			}
+			buttons.push(
+				new ButtonBuilder()
+					.setLabel(isVideo ? 'Direct Video' : 'Direct Image')
+					.setEmoji(isVideo ? '🎬' : '🖼️')
+					.setStyle(ButtonStyle.Link)
+					.setURL(mediaURL)
+			);
+			const row = new ActionRowBuilder().addComponents(buttons);
 
 			// 4. Send Metadata + Buttons (Bottom Message)
 			return await interaction.followUp({
@@ -393,24 +397,20 @@ async function getE621ImageAndReply(
 				content: `⚠️ **Post Found, but the file is unavailable.**\nIt may have been removed or is in an unsupported format.`,
 				embeds: [embedMeta],
 				// We only show the "View Post" button since the "Direct Link" would be empty
-				components: [
-					new ActionRowBuilder().addComponents(
-						new ButtonBuilder()
-							.setLabel("View Post on e621")
-							.setEmoji("🌐")
-							.setStyle(ButtonStyle.Link)
-							.setURL(
-								`https://${searchSite}.net/posts/${data.id}`
-							)
-					),
-				],
+				components: [new ActionRowBuilder().addComponents(buttons)],
 			});
 		}
 	} catch (e) {
-		console.error("e621 Function Error:", e);
-		return await interaction.editReply(
-			"Something went wrong while fetching the image."
-		);
+		console.error("e621 Error:", e);
+
+		// 1. Delete the "Bot is thinking..." message that everyone can see
+		await interaction.deleteReply().catch(() => null); 
+
+		// 2. Send a brand new private message
+		return await interaction.followUp({
+			content: "Something went wrong while searching on e621.",
+			flags: MessageFlags.Ephemeral
+		});
 	}
 }
 
