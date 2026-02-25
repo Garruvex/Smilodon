@@ -1,5 +1,6 @@
 const SlashCommand = require("../../lib/SlashCommand");
 const { EmbedBuilder, MessageFlags } = require("discord.js");
+const { isImageUrl } = require("../../util/utils.js");
 
 const SRA_BASE = "https://some-random-api.com/premium/petpet";
 
@@ -20,8 +21,15 @@ const command = new SlashCommand()
 			const url = new URL(SRA_BASE);
 			url.searchParams.set("avatar", avatarUrl);
 
-			// API returns the image directly at this URL (like img.src), not JSON
 			const imageUrl = url.toString();
+			const ok = await isImageUrl(imageUrl);
+			if (!ok) {
+				return interaction.reply({
+					content:
+						"Image API is unavailable or returned an error. Try again later.",
+					flags: MessageFlags.Ephemeral,
+				});
+			}
 
 			const embed = new EmbedBuilder()
 				.setTitle("🐾 Pet pet!")

@@ -186,6 +186,24 @@ function showPlayerPositionBar(currentPosition, totalDuration, isPause = false, 
 	);
 }
 
+/**
+ * Returns true if the URL returns a successful response with an image Content-Type.
+ * Uses GET but cancels the body so the image is not fully downloaded.
+ */
+async function isImageUrl(url) {
+	try {
+		const response = await fetch(url);
+		if (!response.ok) return false;
+		const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+		if (!contentType.startsWith("image/")) return false;
+		// Avoid downloading the full image; discard the body
+		await response.body?.cancel?.();
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 async function fetchData(url) {
 	try {
 		const response = await fetch(url);
@@ -415,6 +433,7 @@ async function getE621ImageAndReply(
 module.exports = {
 	getTrackDisplay,
 	fetchData,
+	isImageUrl,
 	getE621ImageAndReply,
 	getRandomInt,
 	emptyStrHandler,

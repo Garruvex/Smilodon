@@ -1,5 +1,6 @@
 const SlashCommand = require("../../lib/SlashCommand");
 const { EmbedBuilder, MessageFlags } = require("discord.js");
+const { isImageUrl } = require("../../util/utils.js");
 
 const SRA_BASE = "https://some-random-api.com/premium/amongus";
 
@@ -22,22 +23,32 @@ const command = new SlashCommand()
 		try {
 			const user = interaction.options.getUser("user") || interaction.user;
 			const impostor = interaction.options.getBoolean("impostor") ?? false;
-			const avatarUrl = user.displayAvatarURL({ format: "png", size: 256 });
-			const username = user.username;
+
+			// Ensure we get a static PNG and explicitly set the extension
+			const avatarUrl = user.displayAvatarURL({ extension: "png", size: 256 });
+			const username = user.displayName || user.username; 
 
 			const url = new URL(SRA_BASE);
 			url.searchParams.set("avatar", avatarUrl);
 			url.searchParams.set("username", username);
 			url.searchParams.set("impostor", String(impostor));
 
-			// API returns the image directly at this URL (like img.src), not JSON
 			const imageUrl = url.toString();
+			const ok = await isImageUrl(imageUrl);
+			if (!ok) {
+				return interaction.reply({
+					content:
+						"Image API is unavailable or returned an error. Try again later.",
+					flags: MessageFlags.Ephemeral,
+				});
+			}
 
 			const embed = new EmbedBuilder()
 				.setTitle(impostor ? "🔴 Impostor" : "Crewmate")
 				.setImage(imageUrl)
-				.setDescription(`${username} as ${impostor ? "an impostor" : "a crewmate"}`)
-				.setFooter({ text: "Some Random API" });
+				.setDescription(`${username} was ${impostor ? "the Impostor" : "a Crewmate"}.`)
+				.setColor(impostor ? 0xFF0000 : 0x00FF00) // Optional: add some color flair!
+				.setFooter({ text: "Powered by Some Random API" });
 
 			return interaction.reply({ embeds: [embed] });
 		} catch (e) {
