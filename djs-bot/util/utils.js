@@ -1,5 +1,4 @@
 const { getClient } = require("../bot");
-const colors = require("colors");
 const {
 	EmbedBuilder,
 	AttachmentBuilder,
@@ -346,10 +345,11 @@ async function getE621ImageAndReply(
 		const fileSize = data.file.size;
 		const isVideo = ["webm", "mp4"].includes(extension.toLowerCase());
 		const posterURL = data?.sample?.url || data?.preview?.url || null;
-		console.log(`userMention: ${userMention}`);
-		console.log(`File size: ${fileSize} bytes`);
-		console.log(`Media URL: ${mediaURL}`);
-		console.log(`postLink: ${postLink}`);
+		const logger = getClient().logger;
+		logger.log(`userMention: ${userMention}`);
+		logger.log(`File size: ${fileSize} bytes`);
+		logger.log(`Media URL: ${mediaURL}`);
+		logger.log(`postLink: ${postLink}`);
 
 		const buttons = [
 			new ButtonBuilder()
