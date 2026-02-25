@@ -5,7 +5,7 @@ const { fetchData } = require("../../util/utils.js");
 
 const command = new SlashCommand()
 	.setName("fox")
-	.setDescription("Get a  random image/fact of foxes")
+	.setDescription("Get a random image/fact of foxes")
 	.setRun(async (client, interaction) => {
 		const data = await fetchData("https://some-random-api.com/animal/fox");
 
