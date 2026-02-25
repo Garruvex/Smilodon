@@ -65,6 +65,13 @@ const embedClearedQueue = () =>
 		desc: "Cleared the queue!",
 	});
 
+/** Format ms as m:ss or h:mm:ss for progress display */
+const formatProgressTime = (ms) =>
+	prettyMilliseconds(ms, { colonNotation: true, secondsDecimalDigits: 0 });
+
+/** Fixed width for current time so "current / total" layout doesn't shift (e.g. 0:00 → 1:23:45) */
+const PROGRESS_CURRENT_TIME_WIDTH = 7;
+
 /**
  * @typedef {object} TrackStartedEmbedParams
  * @property {import("../lib/MusicEvents").ILavalinkTrack=} track
@@ -99,6 +106,20 @@ const trackStartedEmbed = ({
 			player?.queue?.size ??
 			player?.queue?.length ??
 			0;
+
+		const progressBar = showPlayerPositionBar(
+			playerPosition,
+			t.duration,
+			isPause
+		);
+		const currentTimeStr = formatProgressTime(playerPosition);
+		const totalTimeStr = formatProgressTime(t.duration);
+		// Line 1: progress bar; Line 2: current / total (current padded so position doesn't shift)
+		const paddedCurrent = currentTimeStr.padStart(PROGRESS_CURRENT_TIME_WIDTH);
+		const progressSection = t.isStream
+			? "`LIVE 🔴`"
+			: `${progressBar}\n\`${paddedCurrent}\` / \`${totalTimeStr}\``;
+
 		embed.setAuthor({ name: title, iconURL: client.config.iconURL })
 			.setDescription(`<a:now_playing:1227326152067252417> [${t.title}](${t.uri})`)
 			.addFields([
@@ -113,18 +134,8 @@ const trackStartedEmbed = ({
 					inline: true,
 				},
 				{
-					name: "Duration",
-					value: t.isStream
-						? `\`LIVE 🔴\``
-						: `\`${prettyMilliseconds(playerPosition, {
-								secondsDecimalDigits: 0,
-							})}\` ${showPlayerPositionBar(
-								playerPosition,
-								t.duration,
-								isPause
-							)} \`${prettyMilliseconds(t.duration, {
-								secondsDecimalDigits: 0,
-							})}\``,
+					name: "Progress",
+					value: progressSection,
 					inline: false,
 				},
 			]);

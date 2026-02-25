@@ -1,6 +1,7 @@
 const SlashCommand = require("../../lib/SlashCommand");
 const { EmbedBuilder, MessageFlags } = require("discord.js");
-const { removeTrack } = require("../../util/player");
+const { spliceQueue, skip } = require("../../util/player");
+const { updateControlMessage } = require("../../util/controlChannel");
 
 const command = new SlashCommand()
 	.setName("skipto")
@@ -48,38 +49,39 @@ const command = new SlashCommand()
 		await interaction.deferReply();
 
 		const position = Number(args);
+		const queueSize = player.queue?.tracks?.length ?? player.queue?.size ?? 0;
 
-		try {
-			const queueSize = player.queue?.tracks?.length ?? player.queue?.size ?? 0;
-			if (!position || position < 0 || position > queueSize) {
-				let thing = new EmbedBuilder()
+		if (!position || position < 1 || position > queueSize) {
+			const thing = new EmbedBuilder()
+				.setColor(client.config.embedColor)
+				.setDescription("❌ | Invalid position!");
+			return interaction.editReply({ embeds: [thing] });
+		}
+
+		if (position === 1) {
+			const skipStatus = await skip(player);
+			if (skipStatus === 1) {
+				const thing = new EmbedBuilder()
 					.setColor(client.config.embedColor)
-					.setDescription("❌ | Invalid position!");
+					.setDescription("❌ | There is nothing to skip to.");
 				return interaction.editReply({ embeds: [thing] });
 			}
-
-			removeTrack(player, 0, position - 1);
-			player.stop();
-
-			let thing = new EmbedBuilder()
-				.setColor(client.config.embedColor)
-				.setDescription("✅ | Skipped to position " + position);
-
-			return interaction.editReply({ embeds: [thing] });
-		} catch {
-			if (position === 1) {
-				player.stop();
-			}
-			return interaction.editReply({
-				embeds: [
-					new EmbedBuilder()
-						.setColor(client.config.embedColor)
-						.setDescription(
-							"✅ | Skipped to position " + position
-						),
-				],
-			});
+		} else {
+			await spliceQueue(player, 0, position - 1);
+			await player.skip();
 		}
+
+		const nextTrack =
+			player.queue?.current ??
+			player.queue?.tracks?.[0] ??
+			player.queue?.[0];
+		updateControlMessage(interaction.guildId, nextTrack ?? undefined).catch(() => {});
+
+		const thing = new EmbedBuilder()
+			.setColor(client.config.embedColor)
+			.setDescription("✅ | Skipped to position " + position);
+
+		return interaction.editReply({ embeds: [thing] });
 	});
 
 module.exports = command;

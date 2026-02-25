@@ -1,6 +1,7 @@
 const SlashCommand = require("../lib/SlashCommand");
 const { ccInteractionHook } = require("../util/interactions");
 const { pause } = require("../util/player");
+const { updateControlMessage, updatePauseControlMessage } = require("../util/controlChannel");
 
 const command = new SlashCommand()
 	.setName("playpause")
@@ -17,6 +18,14 @@ const command = new SlashCommand()
 			await pause(player, false);
 		} else {
 			await pause(player, true);
+		}
+
+		const currentTrack =
+			player.queue?.current ?? player.queue?.tracks?.[0] ?? player.queue?.[0];
+		if (player.paused) {
+			updatePauseControlMessage(interaction.guildId, currentTrack ?? undefined).catch(() => {});
+		} else {
+			updateControlMessage(interaction.guildId, currentTrack ?? undefined).catch(() => {});
 		}
 
 		return interaction.deferUpdate();

@@ -2,6 +2,7 @@ const SlashCommand = require("../../lib/SlashCommand");
 const { EmbedBuilder, MessageFlags } = require("discord.js");
 const playerUtil = require("../../util/player");
 const { redEmbed } = require("../../util/embeds");
+const { updateControlMessage } = require("../../util/controlChannel");
 
 const command = new SlashCommand()
 	.setName("skip")
@@ -51,6 +52,12 @@ const command = new SlashCommand()
 				],
 			});
 		}
+
+		const nextTrack =
+			player.queue?.current ??
+			player.queue?.tracks?.[0] ??
+			player.queue?.[0];
+		updateControlMessage(interaction.guildId, nextTrack ?? undefined).catch(() => {});
 
 		const ret = await interaction.reply({
 			embeds: [

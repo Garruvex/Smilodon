@@ -3,6 +3,7 @@ const { MessageFlags } = require("discord.js");
 const { redEmbed } = require("../util/embeds");
 const { ccInteractionHook } = require("../util/interactions");
 const playerUtil = require("../util/player");
+const { updateControlMessage } = require("../util/controlChannel");
 
 const command = new SlashCommand()
 	.setName("prev")
@@ -26,6 +27,10 @@ const command = new SlashCommand()
 				],
 				flags: MessageFlags.Ephemeral,
 			});
+
+		const currentTrack =
+			player.queue?.current ?? player.queue?.tracks?.[0] ?? player.queue?.[0];
+		updateControlMessage(interaction.guildId, currentTrack ?? undefined).catch(() => {});
 
 		return interaction.deferUpdate();
 	});
