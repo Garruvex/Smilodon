@@ -118,7 +118,7 @@ const trackStartedEmbed = ({
 		const paddedCurrent = currentTimeStr.padStart(PROGRESS_CURRENT_TIME_WIDTH);
 		const progressSection = t.isStream
 			? "`LIVE 🔴`"
-			: `${progressBar}\n\`${paddedCurrent}\` / \`${totalTimeStr}\``;
+			: `  ${progressBar}\n\`${paddedCurrent}\` / \`${totalTimeStr}\`  `;
 
 		embed.setAuthor({ name: title, iconURL: client.config.iconURL })
 			.setDescription(`<a:now_playing:1227326152067252417> [${t.title}](${t.uri})`)
@@ -134,7 +134,7 @@ const trackStartedEmbed = ({
 					inline: true,
 				},
 				{
-					name: "Progress",
+					name: "          ", // Empty space to align the progress section
 					value: progressSection,
 					inline: false,
 				},
