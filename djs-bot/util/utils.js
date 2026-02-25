@@ -1,6 +1,13 @@
 const { getClient } = require("../bot");
-const { EmbedBuilder, AttachmentBuilder, MessageFlags } = require("discord.js");
-const { escapeMarkdown } = require("discord.js");
+const colors = require("colors");
+const {
+	EmbedBuilder,
+	AttachmentBuilder,
+	ActionRowBuilder,
+	ButtonBuilder,
+	ButtonStyle,
+	escapeMarkdown,
+} = require("discord.js");
 const prettyMsModule = require("pretty-ms");
 const prettyMilliseconds = typeof prettyMsModule === "function" ? prettyMsModule : (prettyMsModule?.default ?? prettyMsModule);
 
@@ -260,173 +267,150 @@ function getValue(obj, key) {
 async function getE621ImageAndReply(
 	interaction,
 	searchSite = "e621",
-	replyColour = "blue",
+	replyColour = "#09cde2",
 	limitFavCount = 100
 ) {
-	const search = interaction.options.getString("query") || "";
+	// 1. Extract Options
+	// 1. Extract Options
+	const userQuery = interaction.options.getString("query") || "";
+	const typeFilter = interaction.options.getString("type"); // No fallback here yet
+	const orderFilter = interaction.options.getString("order") || "order:random";
 
-	const baseURL = `https://${searchSite}.net/posts.json?tags=${search}+order:random+favcount:>${limitFavCount}&limit=1`;
+	// 2. Resolve the "any_type" to an empty string
+	const resolvedType = (typeFilter === "any_type" || !typeFilter) ? "" : typeFilter;
 
-	const e621ICON =
-		"https://cdn.discordapp.com/attachments/1125098716886474802/1165536799666475008/E621Logo_1_10.png?ex=654735bb&is=6534c0bb&hm=acb5ceb6cfa4878103029119378e7c4019a22051d5f4be31ddbbbfd297cf444d&";
+	// 3. Build Search String (The actual API query)
+	const finalTags = [
+		userQuery,
+		resolvedType, // This will now correctly include "-type:gif -type:webm"
+		orderFilter,
+		`favcount:>${limitFavCount}`
+	].filter(Boolean).join(" ");
 
-	const Image404 = "https://img.lovepik.com/element/40021/7866.png_1200.png";
-
-	const maxLength = 1000;
-
-	const raw = await fetchData(baseURL);
-	const data = raw?.posts?.[0];
-	if (data === undefined) {
-		return await interaction.reply({
-			embeds: [
-				new EmbedBuilder().setDescription(
-					"no result, please try a different tag"
-				),
-			],
-			flags: MessageFlags.Ephemeral,
-		});
-	}
+	// 4. Build the filter info for the Embed (The display text)
+	const activeFilters = [resolvedType, orderFilter].filter(Boolean);
+	const filterInfo = activeFilters.length > 0 ? ` with \`${activeFilters.join(" ")}\`` : "";
+	const baseURL = `https://${searchSite}.net/posts.json?tags=${encodeURIComponent(finalTags)}&limit=1`;
 
 	await interaction.deferReply();
 
 	try {
-		var descriptionStr = `Description: \n${getValue(data, "description")}`;
-		if (descriptionStr.length > maxLength) {
-			descriptionStr = descriptionStr.slice(0, maxLength - 3) + "...";
-		}
-
-		var tags_string = getValue(data.tags, "general").join(", ");
-		if (tags_string.length > maxLength) {
-			tags_string = tags_string.slice(0, maxLength - 3) + "...";
-		}
-
-		const e621EmbedIntro = new EmbedBuilder()
-			.setTitle(
-				`[${
-					interaction.member.nickname || interaction.user.username
-				}] wants to find a <${
-					search || "RANDOM"
-				}> image on e621 *notices your bulge* UwU What's This?`
-			)
-			.setAuthor({
-				name: "e621",
-				iconURL: e621ICON,
-				proxyIconURL: e621ICON,
-			})
-			// .setImage(getValue(data.file, "url"))
-			.setDescription(`\`\`\`yml\n${descriptionStr}\`\`\``)
-			.setColor(replyColour)
-			.setThumbnail(
-				interaction.user.displayAvatarURL({
-					format: "png",
-					dynamic: true,
-				})
-			);
-
-		const e621EmbedMeta = new EmbedBuilder()
-			.setThumbnail(
-				getValue(data.preview, "url") != "N/A"
-					? getValue(data.preview, "url")
-					: Image404
-			)
-			.setColor(replyColour)
-			.setFields([
-				{
-					name: "Meta",
-					value: `\`\`\`yml\nID: ${getValue(
-						data,
-						"id"
-					)}\nCreated At: ${getValue(
-						data,
-						"created_at"
-					)}\nUpdated At: ${getValue(
-						data,
-						"updated_at"
-					)}\nScore:  🔼${getValue(data, "score").up} | 🔽 ${
-						getValue(data, "score").down
-					} | 📈 ${getValue(data, "score").total} | ❤️: ${getValue(
-						data,
-						"fav_count"
-					)} \nRating: ${getValue(data, "rating")}\`\`\``,
-					inline: false,
-				},
-				{
-					name: `Artists & Characters`,
-					value: `\`\`\`yml\nArtist: ${getValue(
-						data.tags,
-						"artist"
-					).join(" |")}\nCopyright: ${getValue(
-						data.tags,
-						"copyright"
-					).join(", ")} \nCharacter: ${getValue(
-						data.tags,
-						"character"
-					).join(", ")} \nSpecies: ${getValue(
-						data.tags,
-						"species"
-					).join(", ")} \`\`\``,
-					inline: true,
-				},
-				{
-					name: `File`,
-					value: `\`\`\`yml\nWidth: ${getValue(
-						data.file,
-						"width"
-					)}\nHeight: ${getValue(
-						data.file,
-						"height"
-					)} \nExtension: ${getValue(
-						data.file,
-						"ext"
-					)} \nSize: ${getValue(data.file, "size")} \`\`\``,
-					inline: true,
-				},
-			]);
-		const e621EmbedTags = new EmbedBuilder().setColor(replyColour).setFields([
-			{
-				name: "Tags",
-				value: `\`\`\`yml\n${tags_string}\`\`\``,
-				inline: false,
-			},
-		]);
-
-		const e621EmbedSource = new EmbedBuilder().setColor(replyColour).setFields([
-			{
-				name: `Sources`,
-				value: `\n${getValue(data, "sources").join("\n")}`,
-				inline: false,
-			},
-		]);
-
-		const imgURL =
-			getValue(data.file, "url") === "N/A"
-				? Image404
-				: getValue(data.file, "url");
-
-		const e621Attach = new AttachmentBuilder()
-			.setFile(imgURL)
-			.setName(
-				`SPOILER_IMG_${imgURL.split("/").pop()}.${
-					getValue(data.file, "ext") != "N/A"
-						? getValue(data.file, "ext")
-						: "jpg"
-				}`
-			);
-
-		return await interaction.editReply({
-			embeds: [e621EmbedIntro, e621EmbedMeta, e621EmbedTags, e621EmbedSource],
-			files: [e621Attach],
+		const response = await fetch(baseURL, {
+			headers: { "User-Agent": "MyDiscordBot/1.0 (YourE621Username)" },
 		});
+		const raw = await response.json();
+		const data = raw?.posts?.[0];
+
+		if (!data) {
+			return await interaction.editReply(
+				`No results found for: \`${userQuery}\``
+			);
+		}
+
+		const userMention = `<@${interaction.user.id}>`;
+		const postLink = `https://${searchSite}.net/posts/${data.id}`;
+		const description = data.description
+			? data.description.slice(0, 1000)
+			: "No description provided.";
+		const tagsString = (data.tags?.general?.join(", ") || "None").slice(0, 1000);
+
+		// 2. Build the Embed
+		const embedMeta = new EmbedBuilder()
+			.setColor(replyColour)
+			.setDescription(
+				`${userMention} found [Post #${data.id}](${postLink})${filterInfo}`
+			)
+			.addFields(
+				{
+					name: "Description",
+					value: `\`\`\`yml\n${description}\`\`\``,
+				},
+				{
+					name: "Artist/Species",
+					value: `\`\`\`yml\nArtist: ${data.tags.artist.join(", ") || "unknown"}\nSpecies: ${data.tags.species.join(", ") || "unknown"}\`\`\``,
+					inline: true,
+				},
+				{
+					name: "Post Info",
+					value: `\`\`\`yml\nScore: 🔼${data.score.up} | ❤️: ${data.fav_count}\nRating: ${data.rating.toUpperCase()}\nExt: ${data.file.ext.toUpperCase()}\`\`\``,
+					inline: true,
+				},
+				{
+					name: "Tags",
+					value: `\`\`\`yml\n${tagsString}\`\`\``,
+				}
+			);
+		// 4. Handle Media (The Top Message)
+		const mediaURL = data?.file?.url || null;
+		const extension = data.file.ext;
+		const fileSize = data.file.size;
+		const isVideo = ["webm", "mp4"].includes(extension.toLowerCase());
+		const posterURL = data?.sample?.url || data?.preview?.url || null;
+		console.log(`userMention: ${userMention}`);
+		console.log(`File size: ${fileSize} bytes`);
+		console.log(`Media URL: ${mediaURL}`);
+		console.log(`postLink: ${postLink}`);
+		const row = new ActionRowBuilder().addComponents(
+			new ButtonBuilder()
+				.setLabel("View Post")
+				.setEmoji("🌐") // Globe emoji for the website
+				.setStyle(ButtonStyle.Link)
+				.setURL(postLink),
+			new ButtonBuilder()
+				.setLabel(isVideo ? "Direct Video" : "Direct Image")
+				.setEmoji(isVideo ? "🎬" : "🖼️") // Movie clapper for video, picture for image
+				.setStyle(ButtonStyle.Link)
+				.setURL(mediaURL)
+		);
+
+		if (mediaURL) {
+			const extension = data.file.ext;
+			const fileSize = data.file.size;
+			const MAX_SIZE = 24 * 1024 * 1024;
+
+			if (fileSize < MAX_SIZE) {
+				const attachment = new AttachmentBuilder(mediaURL, {
+					name: `SPOILER_${isVideo ? "VIDEO" : "IMAGE"}_${data.id}.${extension}`,
+				});
+				await interaction.editReply({
+					content: `🔍 **Search Result for:** \`${userQuery || "RANDOM"}\``,
+					files: [attachment],
+				});
+			} else {
+				await interaction.editReply({
+					content: `🔍 **Search Result for:** \`${userQuery || "RANDOM"}\`\n📽️ **File too large for upload. Click to reveal:**\n|| ${mediaURL} ||`,
+				});
+			}
+
+			// 4. Send Metadata + Buttons (Bottom Message)
+			return await interaction.followUp({
+				embeds: [embedMeta],
+				components: [row], // Buttons added here
+			});
+		} else {
+			if (posterURL) embedMeta.setImage(posterURL);
+			return await interaction.editReply({
+				content: `⚠️ **Post Found, but the file is unavailable.**\nIt may have been removed or is in an unsupported format.`,
+				embeds: [embedMeta],
+				// We only show the "View Post" button since the "Direct Link" would be empty
+				components: [
+					new ActionRowBuilder().addComponents(
+						new ButtonBuilder()
+							.setLabel("View Post on e621")
+							.setEmoji("🌐")
+							.setStyle(ButtonStyle.Link)
+							.setURL(
+								`https://${searchSite}.net/posts/${data.id}`
+							)
+					),
+				],
+			});
+		}
 	} catch (e) {
-		console.log(e);
-		interaction.editReply({ content: "\u200b" });
-		return await interaction.followUp({
-			embeds: [
-				new EmbedBuilder().setDescription(
-					"something went wrong, please try again later"
-				),
-			],
-		});
+		console.error("e621 Function Error:", e);
+		return await interaction.editReply(
+			"Something went wrong while fetching the image."
+		);
 	}
 }
 
