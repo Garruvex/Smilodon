@@ -1,7 +1,7 @@
 import type {
   IRouteHandlerOptions,
   IServerMethod,
-  RegisterRouteHandler,
+  RegisterRouteHandler 
 } from '../../interfaces/common';
 import { readdirSync } from 'fs';
 import { API_ROUTES_PREFIX } from '../../lib/constants';
@@ -9,7 +9,8 @@ import APIError from '../../lib/APIError';
 import * as db from '../../lib/db';
 import { verifyToken } from '../../lib/jwt';
 
-const routes: RegisterRouteHandler = async (app, opts, done) => {
+
+const routes: RegisterRouteHandler  = async (app, opts) => {
   const routes = readdirSync(__dirname + '/routesHandler').filter((file) =>
     file.endsWith('.js'),
   );
@@ -72,8 +73,6 @@ const routes: RegisterRouteHandler = async (app, opts, done) => {
       request.headers.user_id = user_id;
     }
   });
-
-  done();
 };
 
 export default routes;

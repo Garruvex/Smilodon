@@ -1,65 +1,65 @@
 {
-  "description": "A Blue Smilodon Bot for Music and more",
-  "main": "index.js",
-  "version": "6.0.5",
-  "name": "SmilodonBot#7244",
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "scripts": {
-    "guild": "npm run api-build && node scripts/guild",
-    "deploy": "npm run api-build && node scripts/global",
-    "destroy": "node scripts/destroy",
-    "update": "node scripts/update",
-    "bot": "npm run api-build && node index.js",
-    "start": "npm ci && npm run bot",
-    "db-start": "npm ci && node scripts/DBScript.js && npm run bot",
-    "api-build": "tsc -p api/v1/tsconfig.json",
-    "api-start": "node api/v1/dist/standalone.js"
-  },
-  "keywords": [
-    "music",
-    "discord",
-    "discord-bot",
-    "discord-music",
-    "discord-musicbot"
-  ],
-  "author": "SudhanPlayz",
-  "license": "CUSTOM",
-  "dependencies": {
-    "@fastify/cors": "^8.5.0",
-    "@prisma/client": "^5.22.0",
-    "axios": "^1.7.9",
-    "colors": "^1.4.0",
-    "cors": "^2.8.5",
-    "cron": "^3.2.0",
-    "discord.js": "^14.16.0",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "fastify": "^4.28.1",
-    "fuzzysort": "^2.0.4",
-    "google-translate-api-x": "^10.7.0",
-    "jsonwebtoken": "^9.0.2",
-    "lavalink-client": "^2.9.1",
-    "moment": "^2.30.1",
-    "moment-duration-format": "^2.3.2",
-    "pretty-ms": "^9.2.0",
-    "prisma": "^5.22.0",
-    "puppeteer": "^24.0.0",
-    "rlyrics": "^2.0.1",
-    "songcard": "^1.1.2",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.33.0",
-    "winston": "^3.17.0",
-    "youtube-sr": "^4.3.10"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/SudhanPlayz/Discord-MusicBot.git"
-  },
-  "devDependencies": {
-    "@tsconfig/node20": "^20.1.4",
-    "@types/jsonwebtoken": "^9.0.7",
-    "@types/node": "^22.10.0",
-    "typescript": "^5.7.2"
-  }
+	"description": "A Blue Smilodon Bot for Music and more",
+	"main": "index.js",
+	"version": "6.0.5",
+	"name": "SmilodonBot#7244",
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"scripts": {
+		"guild": "npm run api-build && node scripts/guild",
+		"deploy": "npm run api-build && node scripts/global",
+		"destroy": "node scripts/destroy",
+		"update": "node scripts/update",
+		"bot": "npm run api-build && node index.js",
+		"start": "npm ci && npm run bot",
+		"db-start": "npm ci && node scripts/DBScript.js && npm run bot",
+		"api-build": "tsc -p api/v1/tsconfig.json",
+		"api-start": "node api/v1/dist/standalone.js"
+	},
+	"keywords": [
+		"music",
+		"discord",
+		"discord-bot",
+		"discord-music",
+		"discord-musicbot"
+	],
+	"author": "SudhanPlayz",
+	"license": "CUSTOM",
+	"dependencies": {
+		"@fastify/cors": "^8.5.0",
+		"@prisma/client": "^5.22.0",
+		"axios": "^1.7.9",
+		"colors": "^1.4.0",
+		"cors": "^2.8.5",
+		"cron": "^3.2.0",
+		"discord.js": "^14.16.0",
+		"dotenv": "^16.4.7",
+		"express": "^4.21.2",
+		"fastify": "^4.28.1",
+		"fuzzysort": "^2.0.4",
+		"google-translate-api-x": "^10.7.0",
+		"jsonwebtoken": "^9.0.2",
+		"lavalink-client": "^2.9.7",
+		"moment": "^2.30.1",
+		"moment-duration-format": "^2.3.2",
+		"pretty-ms": "^9.2.0",
+		"prisma": "^5.22.0",
+		"puppeteer": "^24.0.0",
+		"rlyrics": "^2.0.1",
+		"songcard": "^1.1.2",
+		"uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.33.0",
+		"winston": "^3.17.0",
+		"youtube-sr": "^4.3.10"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/SudhanPlayz/Discord-MusicBot.git"
+	},
+	"devDependencies": {
+		"@tsconfig/node20": "^20.1.4",
+		"@types/jsonwebtoken": "^9.0.7",
+		"@types/node": "^22.10.0",
+		"typescript": "^5.7.2"
+	}
 }
